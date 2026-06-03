@@ -1,0 +1,2 @@
+strategy,ann_return,total_return,cagr,ann_vol,sharpe,max_drawdown,calmar_ratio,final_value,n_etfs,budget,min_weight,max_weight,nonzero_positions,top_weight,effective_n
+equal_weight,0.1071,1.3491,0.113,0.1787,0.3193,0.371,0.3046,70472.68,10,30000,0.05,0.2,10,0.1,10.0

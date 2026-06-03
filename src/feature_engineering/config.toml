@@ -1,0 +1,293 @@
+[run]
+name = "mvp_etf_context_2025q4"
+start_date = "2025-10-01"
+end_date = "2025-10-10"
+internal_timezone = "America/New_York"
+output_dir = "outputs/feature_engineering"
+
+[symbol_metadata]
+SPY = { peer_group = "equity_index" }
+QQQ = { peer_group = "equity_index" }
+IWM = { peer_group = "equity_index" }
+TLT = { peer_group = "rates" }
+XLE = { peer_group = "sector" }
+
+[[primary_sources]]
+name = "primary_etfs"
+database = "firstrate"
+table = "etfs"
+symbols = ["SPY", "QQQ", "IWM", "TLT", "XLE"]
+enabled = true
+
+[[context_sources]]
+name = "vix_context"
+database = "firstrate"
+table = "indices"
+symbols = ["VIX"]
+columns = ["close"]
+rename = { close = "ctx_vix_close" }
+align = "asof"
+availability = "same_bar"
+lag = "0min"
+max_staleness = "1D"
+enabled = true
+
+[[context_sources]]
+name = "spy_context"
+database = "firstrate"
+table = "etfs"
+symbols = ["SPY"]
+columns = ["close"]
+rename = { close = "ctx_spy_close" }
+align = "asof"
+availability = "same_bar"
+lag = "0min"
+max_staleness = "1D"
+enabled = true
+
+[[context_sources]]
+name = "qqq_context"
+database = "firstrate"
+table = "etfs"
+symbols = ["QQQ"]
+columns = ["close"]
+rename = { close = "ctx_qqq_close" }
+align = "asof"
+availability = "same_bar"
+lag = "0min"
+max_staleness = "1D"
+enabled = true
+
+[[context_sources]]
+name = "dxy_context"
+database = "firstrate"
+table = "indices"
+symbols = ["DXY"]
+columns = ["close"]
+rename = { close = "ctx_dxy_close" }
+align = "asof"
+availability = "same_bar"
+lag = "0min"
+max_staleness = "1D"
+enabled = true
+
+[[context_sources]]
+name = "rates_future_context"
+database = "firstrate"
+table = "futures"
+symbols = ["SR3_Z25"]
+columns = ["close"]
+rename = { close = "ctx_rates_future_close" }
+align = "asof"
+availability = "same_bar"
+lag = "0min"
+max_staleness = "3D"
+enabled = true
+
+[[context_sources]]
+name = "options_summary"
+database = "firstrate"
+table = "options"
+symbols = ["SPY", "QQQ", "IWM", "TLT", "XLE"]
+columns = ["put_call_volume_ratio", "total_open_interest", "call_iv_mid", "put_iv_mid"]
+rename = { put_call_volume_ratio = "ctx_put_call_volume_ratio", total_open_interest = "ctx_total_open_interest", call_iv_mid = "ctx_call_iv_mid", put_iv_mid = "ctx_put_iv_mid" }
+align = "asof"
+availability = "market_close"
+lag = "1D"
+max_staleness = "5D"
+join_on_symbol = true
+enabled = false
+
+[[timeframes]]
+name = "tf5m"
+frequency = "5min"
+enabled = true
+
+[[timeframes]]
+name = "tf15m"
+frequency = "15min"
+enabled = true
+
+[[features]]
+name = "bar_log_return_1m"
+family = "base"
+fn = "log_return"
+window = 1
+close_col = "close"
+asof = "current_bar"
+lag = "0min"
+max_staleness = "0min"
+enabled = true
+
+[[features]]
+name = "session_move_from_open"
+family = "cross_session"
+fn = "session_return_from_open"
+close_col = "close"
+asof = "current_bar"
+lag = "0min"
+max_staleness = "0min"
+enabled = true
+
+[[features]]
+name = "overnight_gap_pct"
+family = "cross_session"
+fn = "overnight_gap"
+asof = "session_open"
+lag = "0min"
+max_staleness = "1session"
+enabled = true
+
+[[features]]
+name = "prior_session_return_pct"
+family = "cross_session"
+fn = "prior_session_return"
+asof = "current_bar"
+lag = "1session"
+max_staleness = "1session"
+enabled = true
+
+[[features]]
+name = "prior_session_range_pct"
+family = "cross_session"
+fn = "prior_session_range"
+asof = "current_bar"
+lag = "1session"
+max_staleness = "1session"
+enabled = true
+
+[[features]]
+name = "realized_vol_30m"
+family = "realized_volatility"
+fn = "realized_volatility"
+window = 30
+close_col = "close"
+asof = "current_bar"
+lag = "0min"
+max_staleness = "0min"
+enabled = true
+
+[[features]]
+name = "range_mean_30m"
+family = "realized_volatility"
+fn = "range"
+window = 30
+high_col = "high"
+low_col = "low"
+close_col = "close"
+asof = "current_bar"
+lag = "0min"
+max_staleness = "0min"
+enabled = true
+
+[[features]]
+name = "vix_level"
+family = "cross_asset_context"
+fn = "level"
+input_col = "ctx_vix_close"
+asof = "context_asof"
+lag = "0min"
+max_staleness = "1D"
+enabled = true
+
+[[features]]
+name = "relative_return_vs_spy"
+family = "relative_value"
+fn = "relative_return"
+window = 1
+close_col = "close"
+benchmark_close_col = "ctx_spy_close"
+asof = "context_asof"
+lag = "0min"
+max_staleness = "1D"
+enabled = true
+
+[[features]]
+name = "beta_residual_vs_spy_60m"
+family = "relative_value"
+fn = "beta_residual"
+window = 60
+close_col = "close"
+benchmark_close_col = "ctx_spy_close"
+asof = "context_asof"
+lag = "0min"
+max_staleness = "1D"
+enabled = true
+
+[[features]]
+name = "liquidity_surprise_60m"
+family = "liquidity_surprise"
+fn = "liquidity_surprise"
+window = 60
+volume_col = "volume"
+asof = "current_bar"
+lag = "0min"
+max_staleness = "0min"
+enabled = true
+
+[[features]]
+name = "rsi_5m_14"
+family = "multi_timeframe"
+fn = "rsi"
+timeframe = "5min"
+window = 14
+close_col = "close"
+asof = "latest_completed_5min_bar"
+lag = "0min"
+max_staleness = "5min"
+enabled = true
+
+[[features]]
+name = "rsi_15m_14"
+family = "multi_timeframe"
+fn = "rsi"
+timeframe = "15min"
+window = 14
+close_col = "close"
+asof = "latest_completed_15min_bar"
+lag = "0min"
+max_staleness = "15min"
+enabled = true
+
+[[cross_sectional]]
+name = "session_move_zscore_xs"
+fn = "zscore"
+input_col = "session_move_from_open"
+enabled = true
+
+[[cross_sectional]]
+name = "liquidity_surprise_rank_xs"
+fn = "percentile_rank"
+input_col = "liquidity_surprise_60m"
+enabled = true
+
+[[cross_sectional]]
+name = "bar_return_vs_spy_xs"
+fn = "benchmark_residual"
+input_col = "bar_log_return_1m"
+benchmark_symbol = "SPY"
+enabled = true
+
+[[cross_sectional]]
+name = "session_move_peer_demean"
+fn = "peer_group_demean"
+input_col = "session_move_from_open"
+group_col = "peer_group"
+enabled = true
+
+[[labels]]
+name = "target_next_regular_session_return"
+fn = "next_regular_session_return"
+enabled = true
+
+[[labels]]
+name = "target_next_regular_session_volatility"
+fn = "next_regular_session_volatility"
+enabled = true
+
+[[labels]]
+name = "target_next_regular_return_quantile"
+fn = "quantile_label"
+target_col = "target_next_regular_session_return"
+n_quantiles = 5
+enabled = true

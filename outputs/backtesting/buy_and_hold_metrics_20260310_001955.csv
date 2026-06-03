@@ -1,0 +1,2 @@
+start_date,end_date,n_assets,n_trading_days,initial_capital,final_value,total_return,cagr,annualized_return,annualized_volatility,sharpe_ratio,sortino_ratio,max_drawdown,calmar_ratio,risk_free_rate
+2016-01-04,2025-12-31,10,2514,10000.0,17016.274106769728,0.7016274106769729,0.05475296508990124,0.060604891549630786,0.12069081645869092,0.08786825593528519,0.11514452297054667,-0.29847000885498143,0.18344545001338555,0.05

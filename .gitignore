@@ -1,0 +1,42 @@
+# Secrets
+.env
+
+# Python-generated files
+__pycache__/
+*.py[oc]
+build/
+dist/
+wheels/
+*.egg-info
+
+# Virtual environments
+.venv
+
+# Feature-engineering run artifacts
+outputs/feature_engineering/*
+!outputs/feature_engineering/GUIDE_outputs.md
+
+# Local secrets, credentials, and machine-specific state.
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+*.pfx
+*.crt
+*.csr
+id_rsa
+id_dsa
+id_ecdsa
+id_ed25519
+credentials.json
+client_secret*.json
+secrets.json
+secrets.toml
+*.token
+*.secret
+.netrc
+.DS_Store
+.vscode/
+.idea/
+*.log

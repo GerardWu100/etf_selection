@@ -1,0 +1,6 @@
+strategy,ann_return,total_return,cagr,ann_vol,sharpe,max_drawdown,calmar_ratio,final_value,n_etfs,budget,min_weight,max_weight,nonzero_positions,top_weight,effective_n,selection_source,n_source_tickers
+equal_weight,0.1419,2.1015,0.1525,0.1383,0.6647,0.1897,0.8038,93045.68,10,30000,0.05,0.2,10,0.1,10.0,maxdiv,10
+equal_weight,0.1135,1.4733,0.1202,0.1755,0.362,0.3518,0.3417,74198.04,10,30000,0.05,0.2,10,0.1,10.0,greedy,10
+equal_weight,0.0997,1.2155,0.1049,0.1574,0.3159,0.3301,0.3177,66466.27,10,30000,0.05,0.2,10,0.1,10.0,ward,10
+equal_weight,0.1071,1.3491,0.113,0.1787,0.3193,0.371,0.3046,70472.68,10,30000,0.05,0.2,10,0.1,10.0,kmedoids,10
+equal_weight,0.0668,0.7041,0.0691,0.1312,0.1282,0.2886,0.2395,51124.02,10,30000,0.05,0.2,10,0.1,10.0,merged,10
