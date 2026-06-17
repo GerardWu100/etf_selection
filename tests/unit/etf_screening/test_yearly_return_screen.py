@@ -22,7 +22,9 @@ if str(SRC_ROOT) not in sys.path:
 from etf_screening.yearly_return_screen import screen_etfs_by_yearly_return
 
 
-def _build_price_rows(ticker: str, year_prices: dict[int, tuple[float, float]]) -> list[dict]:
+def _build_price_rows(
+    ticker: str, year_prices: dict[int, tuple[float, float]]
+) -> list[dict]:
     """Build two daily close rows per year for a toy ticker."""
     rows = []
     for year, prices in year_prices.items():
