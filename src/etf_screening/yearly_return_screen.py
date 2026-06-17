@@ -282,7 +282,10 @@ def screen_etfs_by_yearly_return(
             start_year=("year", "min"),
             end_year=("year", "max"),
             years_observed=("year", "count"),
-            bad_years=("yearly_return", lambda returns: int((returns < min_yearly_return).sum())),
+            bad_years=(
+                "yearly_return",
+                lambda returns: int((returns < min_yearly_return).sum()),
+            ),
             min_yearly_return=("yearly_return", "min"),
             average_yearly_return=("yearly_return", "mean"),
         )
