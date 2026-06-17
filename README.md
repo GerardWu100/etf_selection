@@ -32,9 +32,12 @@ etf_selection/
 │   ├── src/notebook_support.py
 │   ├── data_pipeline/
 │   ├── correlation_analysis/
+│   ├── etf_screening/
 │   ├── feature_engineering/
 │   ├── portfolio_allocation/
 │   └── backtesting/
+├── scripts/
+│   └── scan_etfs_return_vol.py
 ├── tests/
 │   ├── GUIDE_tests.md
 │   └── unit/
@@ -74,6 +77,9 @@ etf_selection/
   - `outputs/portfolio_allocation/allocation_*.png`
 - Backtesting artifacts:
   - `outputs/backtesting/buy_and_hold_*`
+- ETF return-volatility screen artifacts:
+  - `outputs/etf_return_vol_screen/etf_return_vol_screen_*.csv`
+  - `outputs/etf_return_vol_screen/etf_yearly_returns_*.csv`
 - Feature-engineering run artifacts:
   - `outputs/feature_engineering/<run_name>/...`
 
@@ -96,6 +102,12 @@ Run the point-in-time feature-engineering sample:
 
 ```bash
 uv run python -m feature_engineering.cli --config src/feature_engineering/config.toml
+```
+
+Run the ETF return-volatility screen:
+
+```bash
+uv run python scripts/scan_etfs_return_vol.py
 ```
 
 Execute the walkthrough notebooks from the repository root:

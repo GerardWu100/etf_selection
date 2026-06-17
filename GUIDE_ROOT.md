@@ -66,10 +66,14 @@ ClickHouse + .env
     - [src/portfolio_allocation](/home/ai4000/projects/etf_selection/src/portfolio_allocation)
     - [src/backtesting](/home/ai4000/projects/etf_selection/src/backtesting)
     - [src/feature_engineering](/home/ai4000/projects/etf_selection/src/feature_engineering)
+    - [src/etf_screening](/home/ai4000/projects/etf_selection/src/etf_screening)
 
 - `data/`
   - Shared raw and staged data folders. The active shared pipeline inputs now
     live in `data/raw/`.
+
+- `scripts/`
+  - Thin command-line wrappers for package workflows.
 
 - `outputs/`
   - Generated artifacts grouped outside the source tree.
@@ -92,3 +96,5 @@ Where to start:
 ## Part 3: Short Journal
 
 - 2026-04-16: The repository was reshaped so implementation lives under `src/`, shared pipeline inputs live under `data/raw/`, and notebooks live in a root `notebooks/` tree.
+- 2026-06-17: Added `scripts/` and `src/etf_screening/` for a yearly return
+  hurdle screen ranked by daily volatility.

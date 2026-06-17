@@ -24,6 +24,10 @@ That split is deliberate:
 - `outputs/feature_engineering/`
   - run-specific research artifacts
 
+- `outputs/etf_return_vol_screen/`
+  - ETF screen outputs ranked by daily volatility after calendar-year return
+    hurdles
+
 - `outputs/reports/`, `outputs/figures/`, `outputs/tables/`, `outputs/runs/`
   - root-level scaffolding for future artifact consolidation
 
@@ -36,3 +40,5 @@ That split is deliberate:
 - 2026-04-16: Shared datasets were moved out of `outputs/` and into `data/raw/` so generated artifacts no longer mix with base inputs.
 - 2026-06-17: Added the first root-level run archive under `outputs/runs/` to
   preserve both the executed script and its terminal output.
+- 2026-06-17: Added `outputs/etf_return_vol_screen/` for the yearly return and
+  daily volatility ETF screen.

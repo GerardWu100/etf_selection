@@ -8,9 +8,12 @@ etf_selection/
 │   ├── data_pipeline/
 │   ├── correlation_analysis/
 │   ├── feature_engineering/
+│   ├── etf_screening/
 │   ├── portfolio_allocation/
 │   ├── backtesting/
 │   └── notebook_support.py
+├── scripts/
+│   └── scan_etfs_return_vol.py
 ├── data/
 │   ├── raw/
 │   ├── external/
@@ -66,6 +69,10 @@ outputs/correlation_analysis/selected_merged.csv
   -> outputs/portfolio_allocation/
 
 data/raw/daily_close_volume_screened_2016_2025.parquet
+  -> src/etf_screening/
+  -> outputs/etf_return_vol_screen/
+
+data/raw/daily_close_volume_screened_2016_2025.parquet
   -> src/backtesting/
   -> outputs/backtesting/
 
@@ -101,6 +108,13 @@ ClickHouse multi-asset minute bars
 - `src/feature_engineering/`
   - Builds leakage-aware intraday research datasets with explicit as-of joins
     and label generation.
+
+- `src/etf_screening/`
+  - Builds standalone ETF screens from the shared daily parquet, including the
+    yearly return hurdle screen ranked by daily volatility.
+
+- `scripts/`
+  - Holds thin command-line wrappers that call reusable package logic.
 
 - `src/notebook_support.py`
   - Shared notebook helper for artifact checks and ranking summaries.
