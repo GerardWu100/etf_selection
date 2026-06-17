@@ -27,6 +27,12 @@ That split is deliberate:
 - `outputs/reports/`, `outputs/figures/`, `outputs/tables/`, `outputs/runs/`
   - root-level scaffolding for future artifact consolidation
 
+- `outputs/runs/2026-06-17_001_main_smoke/`
+  - archived smoke-test run containing a copy of `main.py`, captured standard
+    output, captured standard error, and the process exit code
+
 ## Part 3: Short Journal
 
 - 2026-04-16: Shared datasets were moved out of `outputs/` and into `data/raw/` so generated artifacts no longer mix with base inputs.
+- 2026-06-17: Added the first root-level run archive under `outputs/runs/` to
+  preserve both the executed script and its terminal output.
