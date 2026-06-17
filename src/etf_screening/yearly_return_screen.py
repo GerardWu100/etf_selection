@@ -4,9 +4,10 @@ This module implements a deliberately auditable screen:
 
 1. Convert the long daily close table into per-ticker calendar-year returns.
 2. Keep only ETF-years with enough daily observations to count as a usable year.
-3. Keep only ETFs whose every usable calendar year clears the minimum return.
-4. Keep only ETFs whose average calendar-year return clears the average hurdle.
-5. Rank the survivors by daily log-return volatility from lowest to highest.
+3. Count how many usable years fall below the minimum yearly return.
+4. Keep only ETFs with an acceptable number of below-threshold years.
+5. Keep only ETFs whose average calendar-year return clears the average hurdle.
+6. Rank the survivors by daily log-return volatility from lowest to highest.
 
 Return convention
 -----------------
@@ -36,7 +37,8 @@ TRADING_DAYS_PER_YEAR = 252
 DEFAULT_MIN_YEARLY_RETURN = 0.02
 DEFAULT_MIN_AVERAGE_YEARLY_RETURN = 0.04
 DEFAULT_MIN_TRADING_DAYS_PER_YEAR = 200
-DEFAULT_MIN_YEARS = 1
+DEFAULT_MIN_YEARS = 5
+DEFAULT_MAX_BAD_YEARS = 2
 
 REQUIRED_PRICE_COLUMNS = ("ticker", "date", "close_price")
 SCREEN_SUMMARY_COLUMNS = [
@@ -45,6 +47,8 @@ SCREEN_SUMMARY_COLUMNS = [
     "start_year",
     "end_year",
     "years_observed",
+    "bad_years",
+    "bad_year_fraction",
     "min_yearly_return",
     "average_yearly_return",
     "daily_volatility",
@@ -227,6 +231,7 @@ def screen_etfs_by_yearly_return(
     min_average_yearly_return: float = DEFAULT_MIN_AVERAGE_YEARLY_RETURN,
     min_trading_days_per_year: int = DEFAULT_MIN_TRADING_DAYS_PER_YEAR,
     min_years: int = DEFAULT_MIN_YEARS,
+    max_bad_years: int = DEFAULT_MAX_BAD_YEARS,
 ) -> pd.DataFrame:
     """Screen ETFs by yearly return hurdles and rank by daily volatility.
 
@@ -235,27 +240,34 @@ def screen_etfs_by_yearly_return(
     price_frame : pd.DataFrame
         Long daily close table with `ticker`, `date`, and `close_price`.
     min_yearly_return : float, default 0.02
-        Minimum simple return required in every usable calendar year. A value
-        of 0.02 means 2 percent.
+        Simple return threshold used to count bad years. A value of 0.02 means
+        2 percent.
     min_average_yearly_return : float, default 0.04
         Minimum average simple calendar-year return. A value of 0.04 means
         4 percent.
     min_trading_days_per_year : int, default 200
         Minimum number of daily close observations needed for a ticker-year to
         count as a usable calendar year.
-    min_years : int, default 1
+    min_years : int, default 5
         Minimum number of usable calendar years required for an ETF to pass.
+    max_bad_years : int, default 2
+        Maximum number of usable calendar years allowed below
+        `min_yearly_return`. Set to 0 for the strict rule that every usable
+        year must clear the yearly threshold.
 
     Returns
     -------
     pd.DataFrame
         Passing ETFs ranked from lowest to highest daily volatility. Columns:
         `rank`, `ticker`, `start_year`, `end_year`, `years_observed`,
-        `min_yearly_return`, `average_yearly_return`, `daily_volatility`,
-        `annualized_volatility`, and `n_daily_returns`.
+        `bad_years`, `bad_year_fraction`, `min_yearly_return`,
+        `average_yearly_return`, `daily_volatility`, `annualized_volatility`,
+        and `n_daily_returns`.
     """
     if min_years < 1:
         raise ValueError("min_years must be at least 1.")
+    if max_bad_years < 0:
+        raise ValueError("max_bad_years must be at least 0.")
 
     yearly_returns = compute_yearly_returns(
         price_frame=price_frame,
@@ -270,15 +282,19 @@ def screen_etfs_by_yearly_return(
             start_year=("year", "min"),
             end_year=("year", "max"),
             years_observed=("year", "count"),
+            bad_years=("yearly_return", lambda returns: int((returns < min_yearly_return).sum())),
             min_yearly_return=("yearly_return", "min"),
             average_yearly_return=("yearly_return", "mean"),
         )
         .reset_index()
     )
+    yearly_summary["bad_year_fraction"] = (
+        yearly_summary["bad_years"] / yearly_summary["years_observed"]
+    )
 
     passing = yearly_summary[
         (yearly_summary["years_observed"] >= min_years)
-        & (yearly_summary["min_yearly_return"] >= min_yearly_return)
+        & (yearly_summary["bad_years"] <= max_bad_years)
         & (yearly_summary["average_yearly_return"] >= min_average_yearly_return)
     ].copy()
 
@@ -304,6 +320,7 @@ def build_screen_outputs(
     min_average_yearly_return: float = DEFAULT_MIN_AVERAGE_YEARLY_RETURN,
     min_trading_days_per_year: int = DEFAULT_MIN_TRADING_DAYS_PER_YEAR,
     min_years: int = DEFAULT_MIN_YEARS,
+    max_bad_years: int = DEFAULT_MAX_BAD_YEARS,
 ) -> tuple[pd.DataFrame, pd.DataFrame]:
     """Load prices and build both summary and per-year screen outputs.
 
@@ -312,13 +329,15 @@ def build_screen_outputs(
     price_parquet : Path, default PRICE_PARQUET
         Parquet file containing daily close prices.
     min_yearly_return : float, default 0.02
-        Minimum simple calendar-year return required in every usable year.
+        Simple calendar-year return threshold used to count bad years.
     min_average_yearly_return : float, default 0.04
         Minimum average simple calendar-year return.
     min_trading_days_per_year : int, default 200
         Minimum daily close observations required for a usable ticker-year.
-    min_years : int, default 1
+    min_years : int, default 5
         Minimum number of usable calendar years required for an ETF to pass.
+    max_bad_years : int, default 2
+        Maximum number of usable years allowed below `min_yearly_return`.
 
     Returns
     -------
@@ -338,5 +357,6 @@ def build_screen_outputs(
         min_average_yearly_return=min_average_yearly_return,
         min_trading_days_per_year=min_trading_days_per_year,
         min_years=min_years,
+        max_bad_years=max_bad_years,
     )
     return summary, yearly_returns

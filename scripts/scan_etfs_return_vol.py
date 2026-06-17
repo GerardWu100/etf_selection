@@ -17,6 +17,7 @@ from etf_screening.yearly_return_screen import (
     DEFAULT_MIN_TRADING_DAYS_PER_YEAR,
     DEFAULT_MIN_YEARLY_RETURN,
     DEFAULT_MIN_YEARS,
+    DEFAULT_MAX_BAD_YEARS,
     build_screen_outputs,
 )
 
@@ -27,9 +28,9 @@ def parse_args() -> argparse.Namespace:
     """Parse command-line options for the ETF screen."""
     parser = argparse.ArgumentParser(
         description=(
-            "Screen ETFs whose usable calendar years clear a minimum return, "
-            "whose average calendar-year return clears a second hurdle, and "
-            "rank survivors by daily log-return volatility."
+            "Screen ETFs with enough usable calendar years, limited "
+            "below-threshold years, a minimum average calendar-year return, "
+            "and rank survivors by daily log-return volatility."
         )
     )
     parser.add_argument(
@@ -53,7 +54,7 @@ def parse_args() -> argparse.Namespace:
         "--min-yearly-return",
         type=float,
         default=DEFAULT_MIN_YEARLY_RETURN,
-        help="Minimum simple return required in every usable calendar year.",
+        help="Simple yearly return threshold used to count bad years.",
     )
     parser.add_argument(
         "--min-average-yearly-return",
@@ -72,6 +73,12 @@ def parse_args() -> argparse.Namespace:
         type=int,
         default=DEFAULT_MIN_YEARS,
         help="Minimum number of usable calendar years required for an ETF.",
+    )
+    parser.add_argument(
+        "--max-bad-years",
+        type=int,
+        default=DEFAULT_MAX_BAD_YEARS,
+        help="Maximum usable years allowed below --min-yearly-return.",
     )
     return parser.parse_args()
 
@@ -98,6 +105,7 @@ def main() -> None:
         min_average_yearly_return=args.min_average_yearly_return,
         min_trading_days_per_year=args.min_trading_days_per_year,
         min_years=args.min_years,
+        max_bad_years=args.max_bad_years,
     )
 
     summary_path = output_dir / f"etf_return_vol_screen_{run_tag}.csv"
