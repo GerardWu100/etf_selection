@@ -345,10 +345,7 @@ def screen_etfs_by_drawdown(
     passing = summary_with_drawdowns[
         (summary_with_drawdowns["years_observed"] >= min_years)
         & (summary_with_drawdowns["max_drawdown"] >= min_drawdown)
-        & (
-            summary_with_drawdowns["average_yearly_return"]
-            >= min_average_yearly_return
-        )
+        & (summary_with_drawdowns["average_yearly_return"] >= min_average_yearly_return)
     ].copy()
 
     if passing.empty:
