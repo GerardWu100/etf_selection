@@ -9,9 +9,9 @@ The first screen ranks ETFs that satisfy a maturity rule and two return
 conditions:
 
 - at least five usable calendar years by default
-- no more than two usable calendar years below a 2 percent simple return by
+- no more than two usable calendar years below a 1 percent simple return by
   default
-- the average usable calendar-year return must be at least 4 percent by default
+- the average usable calendar-year return must be at least 3 percent by default
 
 Passing ETFs are ranked by daily volatility from lowest to highest. Daily
 volatility is the sample standard deviation of daily log returns.
@@ -31,3 +31,5 @@ volatility is the sample standard deviation of daily log returns.
 - 2026-06-17: Changed the default screen to require at least five usable years
   and allow up to two below-threshold years, reducing the new-ETF bias caused
   by requiring every year to exceed 2 percent.
+- 2026-06-17: Lowered the default return hurdles to 1 percent minimum yearly
+  return and 3 percent average yearly return.

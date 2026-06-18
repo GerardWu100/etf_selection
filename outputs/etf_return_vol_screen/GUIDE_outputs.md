@@ -7,8 +7,8 @@ This folder stores outputs from `scripts/scan_etfs_return_vol.py`.
 The current default screen keeps ETFs that satisfy:
 
 - at least five usable calendar years
-- no more than two usable calendar years below a 2 percent simple return
-- average usable calendar-year simple return of at least 4 percent
+- no more than two usable calendar years below a 1 percent simple return
+- average usable calendar-year simple return of at least 3 percent
 
 Passing ETFs are ranked by daily volatility from lowest to highest. Daily
 volatility is the sample standard deviation of daily log returns.
@@ -35,6 +35,16 @@ volatility is the sample standard deviation of daily log returns.
   - per-ticker, per-calendar-year detail table used by the current default
     screen
 
+- `etf_return_vol_screen_2026-06-17_003.csv`
+  - current default ranked passing ETF summary after lowering the return
+    hurdles to 1 percent minimum yearly return and 3 percent average yearly
+    return
+  - contains 169 passing ETFs
+
+- `etf_yearly_returns_2026-06-17_003.csv`
+  - per-ticker, per-calendar-year detail table used by the updated default
+    screen
+
 ## Part 3: Short Journal
 
 - 2026-06-17: Added the first return-volatility ETF screen output with default
@@ -43,3 +53,5 @@ volatility is the sample standard deviation of daily log returns.
 - 2026-06-17: Added a second output using the revised default rule: at least
   five usable years, no more than two years below 2 percent, and at least
   4 percent average yearly return.
+- 2026-06-17: Updated the current default output rule to allow up to two years
+  below 1 percent and require at least 3 percent average yearly return.

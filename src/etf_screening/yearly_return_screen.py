@@ -20,8 +20,8 @@ Daily volatility is the sample standard deviation of daily log returns:
     daily_log_return_t = log(close_t / close_{t-1})
 
 The project already uses log returns for daily risk calculations, while simple
-calendar-year returns are easier to read for screening hurdles like 2 percent
-per year and 4 percent average per year.
+calendar-year returns are easier to read for screening hurdles like 1 percent
+per year and 3 percent average per year.
 """
 
 from __future__ import annotations
@@ -35,10 +35,10 @@ from data_pipeline.paths import PRICE_PARQUET
 
 TRADING_DAYS_PER_YEAR = 252
 DEFAULT_MIN_YEARLY_RETURN = 0.01
-DEFAULT_MIN_AVERAGE_YEARLY_RETURN = 0.04
+DEFAULT_MIN_AVERAGE_YEARLY_RETURN = 0.03
 DEFAULT_MIN_TRADING_DAYS_PER_YEAR = 200
 DEFAULT_MIN_YEARS = 5
-DEFAULT_MAX_BAD_YEARS = 0
+DEFAULT_MAX_BAD_YEARS = 2
 
 REQUIRED_PRICE_COLUMNS = ("ticker", "date", "close_price")
 SCREEN_SUMMARY_COLUMNS = [
@@ -239,12 +239,12 @@ def screen_etfs_by_yearly_return(
     ----------
     price_frame : pd.DataFrame
         Long daily close table with `ticker`, `date`, and `close_price`.
-    min_yearly_return : float, default 0.02
-        Simple return threshold used to count bad years. A value of 0.02 means
-        2 percent.
-    min_average_yearly_return : float, default 0.04
-        Minimum average simple calendar-year return. A value of 0.04 means
-        4 percent.
+    min_yearly_return : float, default 0.01
+        Simple return threshold used to count bad years. A value of 0.01 means
+        1 percent.
+    min_average_yearly_return : float, default 0.03
+        Minimum average simple calendar-year return. A value of 0.03 means
+        3 percent.
     min_trading_days_per_year : int, default 200
         Minimum number of daily close observations needed for a ticker-year to
         count as a usable calendar year.
@@ -331,9 +331,9 @@ def build_screen_outputs(
     ----------
     price_parquet : Path, default PRICE_PARQUET
         Parquet file containing daily close prices.
-    min_yearly_return : float, default 0.02
+    min_yearly_return : float, default 0.01
         Simple calendar-year return threshold used to count bad years.
-    min_average_yearly_return : float, default 0.04
+    min_average_yearly_return : float, default 0.03
         Minimum average simple calendar-year return.
     min_trading_days_per_year : int, default 200
         Minimum daily close observations required for a usable ticker-year.

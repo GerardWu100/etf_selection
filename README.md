@@ -111,7 +111,7 @@ uv run python scripts/scan_etfs_return_vol.py
 ```
 
 By default this screen requires at least five usable calendar years, allows up
-to two years below a 2 percent simple return, requires at least 4 percent
+to two years below a 1 percent simple return, requires at least 3 percent
 average yearly return, and ranks passing ETFs by lowest daily log-return
 volatility.
 

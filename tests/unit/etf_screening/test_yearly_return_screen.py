@@ -19,7 +19,12 @@ SRC_ROOT = PROJECT_ROOT / "src"
 if str(SRC_ROOT) not in sys.path:
     sys.path.insert(0, str(SRC_ROOT))
 
-from etf_screening.yearly_return_screen import screen_etfs_by_yearly_return
+from etf_screening.yearly_return_screen import (
+    DEFAULT_MAX_BAD_YEARS,
+    DEFAULT_MIN_AVERAGE_YEARLY_RETURN,
+    DEFAULT_MIN_YEARLY_RETURN,
+    screen_etfs_by_yearly_return,
+)
 
 
 def _build_price_rows(
@@ -44,6 +49,13 @@ def _build_price_rows(
             }
         )
     return rows
+
+
+def test_default_screen_hurdles_match_current_research_policy() -> None:
+    """Default return hurdles should match the documented ETF screen policy."""
+    assert math.isclose(DEFAULT_MIN_YEARLY_RETURN, 0.01)
+    assert math.isclose(DEFAULT_MIN_AVERAGE_YEARLY_RETURN, 0.03)
+    assert DEFAULT_MAX_BAD_YEARS == 2
 
 
 def test_screen_keeps_only_etfs_meeting_each_year_and_average_return_hurdles() -> None:
