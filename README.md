@@ -110,10 +110,10 @@ Run the ETF return-volatility screen:
 uv run python scripts/scan_etfs_return_vol.py
 ```
 
-By default this screen requires at least five usable calendar years, allows up
-to two years below a 1 percent simple return, requires at least 3 percent
-average yearly return, and ranks passing ETFs by lowest daily log-return
-volatility.
+By default this screen evaluates each ETF's latest five usable calendar years,
+allows no years below a -1 percent simple return inside that window, requires
+at least 3 percent average yearly return, and ranks passing ETFs by lowest
+weekly log-return volatility.
 
 Execute the walkthrough notebooks from the repository root:
 

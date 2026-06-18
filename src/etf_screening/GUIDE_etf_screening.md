@@ -8,20 +8,23 @@ belong to the diversification, allocation, or backtesting stages.
 The first screen ranks ETFs that satisfy a maturity rule and two return
 conditions:
 
-- at least five usable calendar years by default
-- no more than two usable calendar years below a 1 percent simple return by
-  default
-- the average usable calendar-year return must be at least 3 percent by default
+- latest five usable calendar years by default
+- no usable calendar years below a -1 percent simple return inside that latest
+  five-year window by default
+- the average usable calendar-year return over that latest five-year window
+  must be at least 3 percent by default
 
-Passing ETFs are ranked by daily volatility from lowest to highest. Daily
-volatility is the sample standard deviation of daily log returns.
+Passing ETFs are ranked by weekly volatility from lowest to highest. Weekly
+volatility is the sample standard deviation of weekly log returns. A weekly log
+return is computed from each ticker's last observed close in consecutive
+calendar weeks.
 
 ## Part 2: Code Reference
 
 - `yearly_return_screen.py`
   - loads the shared daily close parquet
   - computes per-ticker calendar-year simple returns
-  - computes per-ticker daily log-return volatility
+  - computes per-ticker weekly log-return volatility
   - returns a ranked screen summary and per-year detail table
 
 ## Part 3: Short Journal
@@ -33,3 +36,8 @@ volatility is the sample standard deviation of daily log returns.
   by requiring every year to exceed 2 percent.
 - 2026-06-17: Lowered the default return hurdles to 1 percent minimum yearly
   return and 3 percent average yearly return.
+- 2026-06-17: Switched the risk ranking from daily volatility to weekly
+  volatility and changed the strict yearly floor to -1 percent with no bad
+  years allowed.
+- 2026-06-17: Interpreted the return hurdle window as each ticker's latest
+  five usable calendar years rather than full available history.

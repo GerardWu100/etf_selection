@@ -1,4 +1,4 @@
-"""Run the ETF yearly-return and daily-volatility screen.
+"""Run the ETF yearly-return and weekly-volatility screen.
 
 The script is intentionally thin. Reusable calculations live in
 `src/etf_screening/yearly_return_screen.py`; this file only parses command-line
@@ -30,7 +30,7 @@ def parse_args() -> argparse.Namespace:
         description=(
             "Screen ETFs with enough usable calendar years, limited "
             "below-threshold years, a minimum average calendar-year return, "
-            "and rank survivors by daily log-return volatility."
+            "and rank survivors by weekly log-return volatility."
         )
     )
     parser.add_argument(
@@ -72,7 +72,10 @@ def parse_args() -> argparse.Namespace:
         "--min-years",
         type=int,
         default=DEFAULT_MIN_YEARS,
-        help="Minimum number of usable calendar years required for an ETF.",
+        help=(
+            "Number of latest usable calendar years used for the return "
+            "hurdles and required for an ETF."
+        ),
     )
     parser.add_argument(
         "--max-bad-years",

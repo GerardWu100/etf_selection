@@ -1,13 +1,14 @@
-"""Screen ETFs by calendar-year returns and daily volatility.
+"""Screen ETFs by calendar-year returns and weekly volatility.
 
 This module implements a deliberately auditable screen:
 
 1. Convert the long daily close table into per-ticker calendar-year returns.
 2. Keep only ETF-years with enough daily observations to count as a usable year.
-3. Count how many usable years fall below the minimum yearly return.
-4. Keep only ETFs with an acceptable number of below-threshold years.
-5. Keep only ETFs whose average calendar-year return clears the average hurdle.
-6. Rank the survivors by daily log-return volatility from lowest to highest.
+3. Keep each ticker's latest required usable years.
+4. Count how many selected years fall below the minimum yearly return.
+5. Keep only ETFs with an acceptable number of below-threshold years.
+6. Keep only ETFs whose average calendar-year return clears the average hurdle.
+7. Rank the survivors by weekly log-return volatility from lowest to highest.
 
 Return convention
 -----------------
@@ -15,12 +16,16 @@ Calendar-year return is a simple return:
 
     yearly_return = final_close / first_close - 1
 
-Daily volatility is the sample standard deviation of daily log returns:
+Weekly volatility is the sample standard deviation of weekly log returns:
 
-    daily_log_return_t = log(close_t / close_{t-1})
+    weekly_log_return_t = log(week_close_t / week_close_{t-1})
+
+The weekly close is the last observed close in each calendar week. Weeks with
+no observation for a ticker are skipped for that ticker, so the volatility
+calculation uses consecutive observed weekly closes.
 
 The project already uses log returns for daily risk calculations, while simple
-calendar-year returns are easier to read for screening hurdles like 1 percent
+calendar-year returns are easier to read for screening hurdles like -1 percent
 per year and 3 percent average per year.
 """
 
@@ -33,12 +38,12 @@ import pandas as pd
 
 from data_pipeline.paths import PRICE_PARQUET
 
-TRADING_DAYS_PER_YEAR = 252
-DEFAULT_MIN_YEARLY_RETURN = 0.01
+WEEKS_PER_YEAR = 52
+DEFAULT_MIN_YEARLY_RETURN = -0.01
 DEFAULT_MIN_AVERAGE_YEARLY_RETURN = 0.03
 DEFAULT_MIN_TRADING_DAYS_PER_YEAR = 200
 DEFAULT_MIN_YEARS = 5
-DEFAULT_MAX_BAD_YEARS = 2
+DEFAULT_MAX_BAD_YEARS = 0
 
 REQUIRED_PRICE_COLUMNS = ("ticker", "date", "close_price")
 SCREEN_SUMMARY_COLUMNS = [
@@ -51,9 +56,9 @@ SCREEN_SUMMARY_COLUMNS = [
     "bad_year_fraction",
     "min_yearly_return",
     "average_yearly_return",
-    "daily_volatility",
-    "annualized_volatility",
-    "n_daily_returns",
+    "weekly_volatility",
+    "annualized_weekly_volatility",
+    "n_weekly_returns",
 ]
 
 
@@ -186,8 +191,8 @@ def compute_yearly_returns(
     return pd.DataFrame(yearly_rows)
 
 
-def compute_daily_volatility(price_frame: pd.DataFrame) -> pd.DataFrame:
-    """Compute daily and annualized log-return volatility for each ticker.
+def compute_weekly_volatility(price_frame: pd.DataFrame) -> pd.DataFrame:
+    """Compute weekly and annualized log-return volatility for each ticker.
 
     Parameters
     ----------
@@ -198,31 +203,43 @@ def compute_daily_volatility(price_frame: pd.DataFrame) -> pd.DataFrame:
     Returns
     -------
     pd.DataFrame
-        One row per ticker with `ticker`, `daily_volatility`,
-        `annualized_volatility`, and `n_daily_returns`.
+        One row per ticker with `ticker`, `weekly_volatility`,
+        `annualized_weekly_volatility`, and `n_weekly_returns`.
     """
     clean = prepare_price_frame(price_frame)
     price_wide = clean.pivot(index="date", columns="ticker", values="close_price")
     price_wide = price_wide.sort_index()
 
-    # Log returns make multi-day compounding additive and match the rest of the
-    # project risk convention. Missing observations are left as missing rather
-    # than filled, so volatility is computed only from observed adjacent closes.
-    log_returns = np.log(price_wide / price_wide.shift(1))
+    # Resample each ticker to one close per calendar week. `last()` uses the
+    # final observed close inside each weekly bin, which handles market
+    # holidays better than requiring a Friday observation.
+    weekly_close = price_wide.resample("W-FRI").last()
 
-    daily_volatility = log_returns.std(axis=0, ddof=1)
-    n_daily_returns = log_returns.count(axis=0)
+    weekly_log_returns_by_ticker = {}
+    for ticker in weekly_close.columns:
+        # Drop empty weeks for this ticker before shifting. This makes the
+        # return series compare consecutive observed weekly closes instead of
+        # forcing a missing week to break the next observed return.
+        ticker_weekly_close = weekly_close[ticker].dropna()
+        weekly_log_returns_by_ticker[ticker] = np.log(
+            ticker_weekly_close / ticker_weekly_close.shift(1)
+        )
+
+    log_returns = pd.DataFrame(weekly_log_returns_by_ticker)
+
+    weekly_volatility = log_returns.std(axis=0, ddof=1)
+    n_weekly_returns = log_returns.count(axis=0)
 
     volatility = pd.DataFrame(
         {
-            "ticker": daily_volatility.index.astype(str),
-            "daily_volatility": daily_volatility.to_numpy(dtype=float),
-            "annualized_volatility": daily_volatility.to_numpy(dtype=float)
-            * np.sqrt(TRADING_DAYS_PER_YEAR),
-            "n_daily_returns": n_daily_returns.to_numpy(dtype=int),
+            "ticker": weekly_volatility.index.astype(str),
+            "weekly_volatility": weekly_volatility.to_numpy(dtype=float),
+            "annualized_weekly_volatility": weekly_volatility.to_numpy(dtype=float)
+            * np.sqrt(WEEKS_PER_YEAR),
+            "n_weekly_returns": n_weekly_returns.to_numpy(dtype=int),
         }
     )
-    return volatility.dropna(subset=["daily_volatility"]).reset_index(drop=True)
+    return volatility.dropna(subset=["weekly_volatility"]).reset_index(drop=True)
 
 
 def screen_etfs_by_yearly_return(
@@ -233,15 +250,15 @@ def screen_etfs_by_yearly_return(
     min_years: int = DEFAULT_MIN_YEARS,
     max_bad_years: int = DEFAULT_MAX_BAD_YEARS,
 ) -> pd.DataFrame:
-    """Screen ETFs by yearly return hurdles and rank by daily volatility.
+    """Screen ETFs by yearly return hurdles and rank by weekly volatility.
 
     Parameters
     ----------
     price_frame : pd.DataFrame
         Long daily close table with `ticker`, `date`, and `close_price`.
-    min_yearly_return : float, default 0.01
-        Simple return threshold used to count bad years. A value of 0.01 means
-        1 percent.
+    min_yearly_return : float, default -0.01
+        Simple return threshold used to count bad years. A value of -0.01
+        means -1 percent.
     min_average_yearly_return : float, default 0.03
         Minimum average simple calendar-year return. A value of 0.03 means
         3 percent.
@@ -249,8 +266,9 @@ def screen_etfs_by_yearly_return(
         Minimum number of daily close observations needed for a ticker-year to
         count as a usable calendar year.
     min_years : int, default 5
-        Minimum number of usable calendar years required for an ETF to pass.
-    max_bad_years : int, default 2
+        Number of recent usable calendar years required for an ETF to pass.
+        The return hurdles are evaluated over only these latest usable years.
+    max_bad_years : int, default 0
         Maximum number of usable calendar years allowed below
         `min_yearly_return`. Set to 0 for the strict rule that every usable
         year must clear the yearly threshold.
@@ -258,11 +276,11 @@ def screen_etfs_by_yearly_return(
     Returns
     -------
     pd.DataFrame
-        Passing ETFs ranked from lowest to highest daily volatility. Columns:
+        Passing ETFs ranked from lowest to highest weekly volatility. Columns:
         `rank`, `ticker`, `start_year`, `end_year`, `years_observed`,
         `bad_years`, `bad_year_fraction`, `min_yearly_return`,
-        `average_yearly_return`, `daily_volatility`, `annualized_volatility`,
-        and `n_daily_returns`.
+        `average_yearly_return`, `weekly_volatility`,
+        `annualized_weekly_volatility`, and `n_weekly_returns`.
     """
     if min_years < 1:
         raise ValueError("min_years must be at least 1.")
@@ -276,8 +294,18 @@ def screen_etfs_by_yearly_return(
     if yearly_returns.empty:
         return pd.DataFrame(columns=SCREEN_SUMMARY_COLUMNS)
 
+    # The screen is intended to describe the recent research window. For the
+    # default configuration, `min_years == 5`, so every ticker is evaluated on
+    # its latest five usable calendar years rather than its full available
+    # history. Older data can still exist in the detail CSV for audit work.
+    recent_yearly_returns = (
+        yearly_returns.sort_values(["ticker", "year"])
+        .groupby("ticker", group_keys=False)
+        .tail(min_years)
+    )
+
     yearly_summary = (
-        yearly_returns.groupby("ticker")
+        recent_yearly_returns.groupby("ticker")
         .agg(
             start_year=("year", "min"),
             end_year=("year", "max"),
@@ -304,10 +332,10 @@ def screen_etfs_by_yearly_return(
     if passing.empty:
         return pd.DataFrame(columns=SCREEN_SUMMARY_COLUMNS)
 
-    volatility = compute_daily_volatility(price_frame)
+    volatility = compute_weekly_volatility(price_frame)
     result = passing.merge(volatility, on="ticker", how="inner")
     result = result.sort_values(
-        ["daily_volatility", "average_yearly_return", "ticker"],
+        ["weekly_volatility", "average_yearly_return", "ticker"],
         ascending=[True, False, True],
     ).reset_index(drop=True)
 
@@ -331,15 +359,16 @@ def build_screen_outputs(
     ----------
     price_parquet : Path, default PRICE_PARQUET
         Parquet file containing daily close prices.
-    min_yearly_return : float, default 0.01
+    min_yearly_return : float, default -0.01
         Simple calendar-year return threshold used to count bad years.
     min_average_yearly_return : float, default 0.03
         Minimum average simple calendar-year return.
     min_trading_days_per_year : int, default 200
         Minimum daily close observations required for a usable ticker-year.
     min_years : int, default 5
-        Minimum number of usable calendar years required for an ETF to pass.
-    max_bad_years : int, default 2
+        Number of recent usable calendar years required for an ETF to pass.
+        The return hurdles are evaluated over only these latest usable years.
+    max_bad_years : int, default 0
         Maximum number of usable years allowed below `min_yearly_return`.
 
     Returns

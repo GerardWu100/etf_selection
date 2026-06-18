@@ -1,4 +1,4 @@
-"""Tests for the yearly return and daily volatility ETF screen.
+"""Tests for the yearly return and weekly volatility ETF screen.
 
 The screen is intentionally small, but the calendar-year logic is easy to get
 wrong. These tests use toy prices with known yearly returns so the hurdle and
@@ -23,6 +23,7 @@ from etf_screening.yearly_return_screen import (
     DEFAULT_MAX_BAD_YEARS,
     DEFAULT_MIN_AVERAGE_YEARLY_RETURN,
     DEFAULT_MIN_YEARLY_RETURN,
+    compute_weekly_volatility,
     screen_etfs_by_yearly_return,
 )
 
@@ -51,15 +52,63 @@ def _build_price_rows(
     return rows
 
 
+def _build_dated_price_rows(ticker: str, dated_prices: dict[str, float]) -> list[dict]:
+    """Build daily close rows from explicit date-to-price mappings."""
+    rows = []
+    for date, close_price in dated_prices.items():
+        rows.append(
+            {
+                "ticker": ticker,
+                "date": date,
+                "close_price": close_price,
+            }
+        )
+    return rows
+
+
 def test_default_screen_hurdles_match_current_research_policy() -> None:
     """Default return hurdles should match the documented ETF screen policy."""
-    assert math.isclose(DEFAULT_MIN_YEARLY_RETURN, 0.01)
+    assert math.isclose(DEFAULT_MIN_YEARLY_RETURN, -0.01)
     assert math.isclose(DEFAULT_MIN_AVERAGE_YEARLY_RETURN, 0.03)
-    assert DEFAULT_MAX_BAD_YEARS == 2
+    assert DEFAULT_MAX_BAD_YEARS == 0
 
 
-def test_screen_keeps_only_etfs_meeting_each_year_and_average_return_hurdles() -> None:
-    """An ETF must pass every yearly hurdle and the average yearly hurdle."""
+def test_weekly_volatility_uses_calendar_week_last_close() -> None:
+    """Weekly volatility should use each calendar week's last observed close."""
+    price_frame = pd.DataFrame(
+        _build_dated_price_rows(
+            "WEEKLY",
+            {
+                "2024-01-02": 100.0,
+                "2024-01-05": 110.0,
+                "2024-01-08": 120.0,
+                "2024-01-12": 121.0,
+                "2024-01-16": 130.0,
+                "2024-01-19": 133.1,
+            },
+        )
+    )
+
+    result = compute_weekly_volatility(price_frame)
+
+    expected_returns = pd.Series(
+        [
+            math.log(121.0 / 110.0),
+            math.log(133.1 / 121.0),
+        ]
+    )
+    expected_weekly_volatility = expected_returns.std(ddof=1)
+
+    assert result["ticker"].tolist() == ["WEEKLY"]
+    assert math.isclose(
+        result.loc[0, "weekly_volatility"],
+        expected_weekly_volatility,
+    )
+    assert result.loc[0, "n_weekly_returns"] == 2
+
+
+def test_screen_keeps_only_etfs_meeting_yearly_and_average_return_hurdles() -> None:
+    """An ETF must pass the yearly hurdle count and average yearly hurdle."""
     price_frame = pd.DataFrame(
         _build_price_rows(
             "LOWVOL",
@@ -96,7 +145,7 @@ def test_screen_keeps_only_etfs_meeting_each_year_and_average_return_hurdles() -
         min_yearly_return=0.02,
         min_average_yearly_return=0.04,
         min_trading_days_per_year=2,
-        min_years=1,
+        min_years=2,
         max_bad_years=0,
     )
 
@@ -104,7 +153,7 @@ def test_screen_keeps_only_etfs_meeting_each_year_and_average_return_hurdles() -
     assert result["years_observed"].tolist() == [2, 2]
     assert math.isclose(result.loc[0, "min_yearly_return"], 0.04)
     assert math.isclose(result.loc[0, "average_yearly_return"], 0.045)
-    assert result.loc[0, "daily_volatility"] < result.loc[1, "daily_volatility"]
+    assert result.loc[0, "weekly_volatility"] < result.loc[1, "weekly_volatility"]
 
 
 def test_screen_can_allow_limited_bad_years_after_minimum_history() -> None:
@@ -151,3 +200,48 @@ def test_screen_can_allow_limited_bad_years_after_minimum_history() -> None:
     assert result["ticker"].tolist() == ["MATURE"]
     assert result.loc[0, "bad_years"] == 2
     assert math.isclose(result.loc[0, "bad_year_fraction"], 0.4)
+
+
+def test_screen_uses_latest_required_years_for_return_hurdles() -> None:
+    """Older years should not affect a screen configured for the latest five years."""
+    price_frame = pd.DataFrame(
+        _build_price_rows(
+            "RECENT_PASS",
+            {
+                2019: (100.0, 50.0),
+                2020: (100.0, 50.0),
+                2021: (100.0, 104.0),
+                2022: (100.0, 105.0),
+                2023: (100.0, 106.0),
+                2024: (100.0, 107.0),
+                2025: (100.0, 108.0),
+            },
+        )
+        + _build_price_rows(
+            "RECENT_FAIL",
+            {
+                2019: (100.0, 120.0),
+                2020: (100.0, 120.0),
+                2021: (100.0, 104.0),
+                2022: (100.0, 105.0),
+                2023: (100.0, 98.0),
+                2024: (100.0, 107.0),
+                2025: (100.0, 108.0),
+            },
+        )
+    )
+
+    result = screen_etfs_by_yearly_return(
+        price_frame=price_frame,
+        min_yearly_return=-0.01,
+        min_average_yearly_return=0.03,
+        min_trading_days_per_year=2,
+        min_years=5,
+        max_bad_years=0,
+    )
+
+    assert result["ticker"].tolist() == ["RECENT_PASS"]
+    assert result.loc[0, "start_year"] == 2021
+    assert result.loc[0, "end_year"] == 2025
+    assert result.loc[0, "years_observed"] == 5
+    assert math.isclose(result.loc[0, "min_yearly_return"], 0.04)
