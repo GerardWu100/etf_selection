@@ -22,6 +22,7 @@ from etf_screening.yearly_return_screen import (
 )
 
 DEFAULT_OUTPUT_DIR = PROJECT_ROOT / "outputs" / "etf_return_vol_screen"
+CSV_FLOAT_FORMAT = "%.3f"
 
 
 def parse_args() -> argparse.Namespace:
@@ -73,8 +74,9 @@ def parse_args() -> argparse.Namespace:
         type=int,
         default=DEFAULT_MIN_YEARS,
         help=(
-            "Number of latest usable calendar years used for the return "
-            "hurdles and required for an ETF."
+            "Minimum number of usable calendar years required for an ETF. "
+            "Tickers with longer usable histories are evaluated over full "
+            "history."
         ),
     )
     parser.add_argument(
@@ -114,8 +116,8 @@ def main() -> None:
     summary_path = output_dir / f"etf_return_vol_screen_{run_tag}.csv"
     yearly_path = output_dir / f"etf_yearly_returns_{run_tag}.csv"
 
-    summary.to_csv(summary_path, index=False)
-    yearly_returns.to_csv(yearly_path, index=False)
+    summary.to_csv(summary_path, index=False, float_format=CSV_FLOAT_FORMAT)
+    yearly_returns.to_csv(yearly_path, index=False, float_format=CSV_FLOAT_FORMAT)
 
     print(f"Wrote ranked ETF screen: {summary_path}")
     print(f"Wrote yearly return details: {yearly_path}")

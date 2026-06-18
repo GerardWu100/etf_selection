@@ -202,11 +202,23 @@ def test_screen_can_allow_limited_bad_years_after_minimum_history() -> None:
     assert math.isclose(result.loc[0, "bad_year_fraction"], 0.4)
 
 
-def test_screen_uses_latest_required_years_for_return_hurdles() -> None:
-    """Older years should not affect a screen configured for the latest five years."""
+def test_screen_uses_full_history_after_minimum_years() -> None:
+    """Older usable years should still affect mature ETFs after the minimum history."""
     price_frame = pd.DataFrame(
         _build_price_rows(
-            "RECENT_PASS",
+            "FULL_PASS",
+            {
+                2019: (100.0, 104.0),
+                2020: (100.0, 105.0),
+                2021: (100.0, 104.0),
+                2022: (100.0, 105.0),
+                2023: (100.0, 106.0),
+                2024: (100.0, 107.0),
+                2025: (100.0, 108.0),
+            },
+        )
+        + _build_price_rows(
+            "OLDER_FAIL",
             {
                 2019: (100.0, 50.0),
                 2020: (100.0, 50.0),
@@ -240,8 +252,8 @@ def test_screen_uses_latest_required_years_for_return_hurdles() -> None:
         max_bad_years=0,
     )
 
-    assert result["ticker"].tolist() == ["RECENT_PASS"]
-    assert result.loc[0, "start_year"] == 2021
+    assert result["ticker"].tolist() == ["FULL_PASS"]
+    assert result.loc[0, "start_year"] == 2019
     assert result.loc[0, "end_year"] == 2025
-    assert result.loc[0, "years_observed"] == 5
+    assert result.loc[0, "years_observed"] == 7
     assert math.isclose(result.loc[0, "min_yearly_return"], 0.04)

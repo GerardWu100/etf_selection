@@ -4,11 +4,10 @@ This module implements a deliberately auditable screen:
 
 1. Convert the long daily close table into per-ticker calendar-year returns.
 2. Keep only ETF-years with enough daily observations to count as a usable year.
-3. Keep each ticker's latest required usable years.
-4. Count how many selected years fall below the minimum yearly return.
-5. Keep only ETFs with an acceptable number of below-threshold years.
-6. Keep only ETFs whose average calendar-year return clears the average hurdle.
-7. Rank the survivors by weekly log-return volatility from lowest to highest.
+3. Count how many usable years fall below the minimum yearly return.
+4. Keep only ETFs with an acceptable number of below-threshold years.
+5. Keep only ETFs whose average calendar-year return clears the average hurdle.
+6. Rank the survivors by weekly log-return volatility from lowest to highest.
 
 Return convention
 -----------------
@@ -266,8 +265,8 @@ def screen_etfs_by_yearly_return(
         Minimum number of daily close observations needed for a ticker-year to
         count as a usable calendar year.
     min_years : int, default 5
-        Number of recent usable calendar years required for an ETF to pass.
-        The return hurdles are evaluated over only these latest usable years.
+        Minimum number of usable calendar years required for an ETF to pass.
+        If a ticker has more usable history, all usable years are evaluated.
     max_bad_years : int, default 0
         Maximum number of usable calendar years allowed below
         `min_yearly_return`. Set to 0 for the strict rule that every usable
@@ -294,18 +293,8 @@ def screen_etfs_by_yearly_return(
     if yearly_returns.empty:
         return pd.DataFrame(columns=SCREEN_SUMMARY_COLUMNS)
 
-    # The screen is intended to describe the recent research window. For the
-    # default configuration, `min_years == 5`, so every ticker is evaluated on
-    # its latest five usable calendar years rather than its full available
-    # history. Older data can still exist in the detail CSV for audit work.
-    recent_yearly_returns = (
-        yearly_returns.sort_values(["ticker", "year"])
-        .groupby("ticker", group_keys=False)
-        .tail(min_years)
-    )
-
     yearly_summary = (
-        recent_yearly_returns.groupby("ticker")
+        yearly_returns.groupby("ticker")
         .agg(
             start_year=("year", "min"),
             end_year=("year", "max"),
@@ -366,8 +355,8 @@ def build_screen_outputs(
     min_trading_days_per_year : int, default 200
         Minimum daily close observations required for a usable ticker-year.
     min_years : int, default 5
-        Number of recent usable calendar years required for an ETF to pass.
-        The return hurdles are evaluated over only these latest usable years.
+        Minimum number of usable calendar years required for an ETF to pass.
+        If a ticker has more usable history, all usable years are evaluated.
     max_bad_years : int, default 0
         Maximum number of usable years allowed below `min_yearly_return`.
 

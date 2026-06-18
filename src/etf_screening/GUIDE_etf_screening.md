@@ -8,11 +8,12 @@ belong to the diversification, allocation, or backtesting stages.
 The first screen ranks ETFs that satisfy a maturity rule and two return
 conditions:
 
-- latest five usable calendar years by default
-- no usable calendar years below a -1 percent simple return inside that latest
-  five-year window by default
-- the average usable calendar-year return over that latest five-year window
-  must be at least 3 percent by default
+- at least five usable calendar years by default
+- all usable calendar years are evaluated when an ETF has more than five usable
+  years
+- no usable calendar years below a -1 percent simple return by default
+- the average usable calendar-year return over the evaluated history must be at
+  least 3 percent by default
 
 Passing ETFs are ranked by weekly volatility from lowest to highest. Weekly
 volatility is the sample standard deviation of weekly log returns. A weekly log
@@ -41,3 +42,5 @@ calendar weeks.
   years allowed.
 - 2026-06-17: Interpreted the return hurdle window as each ticker's latest
   five usable calendar years rather than full available history.
+- 2026-06-17: Reverted the return hurdle window to full usable history for
+  ETFs with more than five usable years.

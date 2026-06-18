@@ -6,15 +6,17 @@ This folder stores outputs from `scripts/scan_etfs_return_vol.py`.
 
 The current default screen keeps ETFs that satisfy:
 
-- latest five usable calendar years
-- no usable calendar years below a -1 percent simple return inside that latest
-  five-year window
-- average usable calendar-year simple return of at least 3 percent inside that
-  latest five-year window
+- at least five usable calendar years
+- all usable calendar years are evaluated when an ETF has more than five usable
+  years
+- no usable calendar years below a -1 percent simple return
+- average usable calendar-year simple return of at least 3 percent over the
+  evaluated history
 
 Passing ETFs are ranked by weekly volatility from lowest to highest. Weekly
 volatility is the sample standard deviation of weekly log returns computed from
-each ticker's last observed close in consecutive calendar weeks.
+each ticker's last observed close in consecutive calendar weeks. Floating-point
+CSV values are written to three decimal places.
 
 ## Part 2: File Map
 
@@ -40,7 +42,7 @@ each ticker's last observed close in consecutive calendar weeks.
 - `etf_return_vol_screen_2026-06-17_003.csv`
   - current default ranked passing ETF summary after switching to weekly
     volatility, a -1 percent minimum yearly return, and zero allowed bad years
-  - contains 39 passing ETFs
+  - contains 7 passing ETFs
   - key columns: `rank`, `ticker`, `years_observed`, `bad_years`,
     `min_yearly_return`, `average_yearly_return`, `weekly_volatility`,
     `annualized_weekly_volatility`
@@ -61,5 +63,7 @@ each ticker's last observed close in consecutive calendar weeks.
   below 1 percent and require at least 3 percent average yearly return.
 - 2026-06-17: Updated the current default output rule to allow no years below
   -1 percent and rank passing ETFs by weekly volatility.
-- 2026-06-17: Clarified that the current output rule evaluates return hurdles
-  on each ETF's latest five usable calendar years.
+- 2026-06-17: Temporarily interpreted return hurdles as applying to each ETF's
+  latest five usable calendar years.
+- 2026-06-17: Reverted the current output rule to full usable history for ETFs
+  with more than five usable years and rounded CSV floats to three decimals.
