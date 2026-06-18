@@ -62,6 +62,14 @@ CSV values are written to three decimal places.
   - per-ticker, per-calendar-year detail table used by the current default
     screen
 
+- `weekly_correlation_matrix_2026-06-18_001.csv`
+  - weekly log-return correlation matrix for `JPST`, `JAAA`, `SGOV`, `PULS`,
+    `STIP`, `VNLA`, and `VTIP`
+  - uses only common weekly return dates across all seven tickers
+
+- `weekly_correlation_heatmap_2026-06-18_001.png`
+  - colored heatmap version of the same common-date weekly correlation matrix
+
 ## Part 3: Short Journal
 
 - 2026-06-17: Added the first return-volatility ETF screen output with default
