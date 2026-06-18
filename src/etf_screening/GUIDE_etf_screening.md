@@ -5,26 +5,28 @@
 `src/etf_screening/` contains standalone ETF screening logic that does not
 belong to the diversification, allocation, or backtesting stages.
 
-The first screen ranks ETFs that satisfy a maturity rule and two return
-conditions:
+The first screen ranks ETFs that satisfy a maturity rule, a drawdown rule, and
+an average return condition:
 
 - at least five usable calendar years by default
 - all usable calendar years are evaluated when an ETF has more than five usable
   years
-- no usable calendar years below a -1 percent simple return by default
+- weekly maximum drawdown must be no worse than -15 percent by default
 - the average usable calendar-year return over the evaluated history must be at
   least 3 percent by default
 
 Passing ETFs are ranked by weekly volatility from lowest to highest. Weekly
 volatility is the sample standard deviation of weekly log returns. A weekly log
 return is computed from each ticker's last observed close in consecutive
-calendar weeks.
+calendar weeks. Maximum drawdown is the worst percentage loss from a prior
+weekly close peak.
 
 ## Part 2: Code Reference
 
 - `yearly_return_screen.py`
   - loads the shared daily close parquet
   - computes per-ticker calendar-year simple returns
+  - computes per-ticker weekly maximum drawdown
   - computes per-ticker weekly log-return volatility
   - returns a ranked screen summary and per-year detail table
 
@@ -44,3 +46,5 @@ calendar weeks.
   five usable calendar years rather than full available history.
 - 2026-06-17: Reverted the return hurdle window to full usable history for
   ETFs with more than five usable years.
+- 2026-06-18: Replaced the minimum yearly return / bad-year screen with a
+  weekly maximum-drawdown floor.

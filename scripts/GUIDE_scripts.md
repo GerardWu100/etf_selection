@@ -9,9 +9,10 @@ functions, and write outputs.
 ## Part 2: Code Reference
 
 - `scan_etfs_return_vol.py`
-  - runs the calendar-year ETF return screen
+  - runs the drawdown, calendar-year return, and weekly-volatility ETF screen
   - defaults to at least five usable years, full usable history for older ETFs,
-    no years below -1 percent, and at least 3 percent average yearly return
+    weekly maximum drawdown no worse than -15 percent, and at least 3 percent
+    average yearly return
   - writes a ranked summary CSV and a per-year return detail CSV under
     `outputs/etf_return_vol_screen/`
   - writes floating-point CSV values to three decimal places
@@ -31,3 +32,5 @@ functions, and write outputs.
 - 2026-06-17: Reverted the return hurdle window to full usable history for
   ETFs with more than five usable years and rounded CSV floats to three
   decimals.
+- 2026-06-18: Replaced `--min-yearly-return` and `--max-bad-years` with
+  `--min-drawdown`.

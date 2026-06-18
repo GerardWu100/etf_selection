@@ -20,11 +20,11 @@ if str(SRC_ROOT) not in sys.path:
     sys.path.insert(0, str(SRC_ROOT))
 
 from etf_screening.yearly_return_screen import (
-    DEFAULT_MAX_BAD_YEARS,
+    DEFAULT_MIN_DRAWDOWN,
     DEFAULT_MIN_AVERAGE_YEARLY_RETURN,
-    DEFAULT_MIN_YEARLY_RETURN,
+    compute_drawdown_metrics,
     compute_weekly_volatility,
-    screen_etfs_by_yearly_return,
+    screen_etfs_by_drawdown,
 )
 
 
@@ -68,9 +68,8 @@ def _build_dated_price_rows(ticker: str, dated_prices: dict[str, float]) -> list
 
 def test_default_screen_hurdles_match_current_research_policy() -> None:
     """Default return hurdles should match the documented ETF screen policy."""
-    assert math.isclose(DEFAULT_MIN_YEARLY_RETURN, -0.01)
+    assert math.isclose(DEFAULT_MIN_DRAWDOWN, -0.15)
     assert math.isclose(DEFAULT_MIN_AVERAGE_YEARLY_RETURN, 0.03)
-    assert DEFAULT_MAX_BAD_YEARS == 0
 
 
 def test_weekly_volatility_uses_calendar_week_last_close() -> None:
@@ -107,8 +106,28 @@ def test_weekly_volatility_uses_calendar_week_last_close() -> None:
     assert result.loc[0, "n_weekly_returns"] == 2
 
 
-def test_screen_keeps_only_etfs_meeting_yearly_and_average_return_hurdles() -> None:
-    """An ETF must pass the yearly hurdle count and average yearly hurdle."""
+def test_drawdown_metrics_use_weekly_wealth_peak_to_trough_loss() -> None:
+    """Maximum drawdown should be measured from weekly wealth peaks."""
+    price_frame = pd.DataFrame(
+        _build_dated_price_rows(
+            "DRAWDOWN",
+            {
+                "2024-01-05": 100.0,
+                "2024-01-12": 120.0,
+                "2024-01-19": 90.0,
+                "2024-01-26": 108.0,
+            },
+        )
+    )
+
+    result = compute_drawdown_metrics(price_frame)
+
+    assert result["ticker"].tolist() == ["DRAWDOWN"]
+    assert math.isclose(result.loc[0, "max_drawdown"], -0.25)
+
+
+def test_screen_keeps_only_etfs_meeting_drawdown_and_average_return_hurdles() -> None:
+    """An ETF must pass the drawdown floor and average yearly return hurdle."""
     price_frame = pd.DataFrame(
         _build_price_rows(
             "LOWVOL",
@@ -125,10 +144,10 @@ def test_screen_keeps_only_etfs_meeting_yearly_and_average_return_hurdles() -> N
             },
         )
         + _build_price_rows(
-            "BADYEAR",
+            "BIG_DRAWDOWN",
             {
-                2020: (100.0, 101.0),
-                2021: (100.0, 110.0),
+                2020: (100.0, 120.0),
+                2021: (100.0, 90.0),
             },
         )
         + _build_price_rows(
@@ -140,13 +159,12 @@ def test_screen_keeps_only_etfs_meeting_yearly_and_average_return_hurdles() -> N
         )
     )
 
-    result = screen_etfs_by_yearly_return(
+    result = screen_etfs_by_drawdown(
         price_frame=price_frame,
-        min_yearly_return=0.02,
+        min_drawdown=-0.20,
         min_average_yearly_return=0.04,
         min_trading_days_per_year=2,
         min_years=2,
-        max_bad_years=0,
     )
 
     assert result["ticker"].tolist() == ["LOWVOL", "HIGHVOL"]
@@ -156,8 +174,8 @@ def test_screen_keeps_only_etfs_meeting_yearly_and_average_return_hurdles() -> N
     assert result.loc[0, "weekly_volatility"] < result.loc[1, "weekly_volatility"]
 
 
-def test_screen_can_allow_limited_bad_years_after_minimum_history() -> None:
-    """A mature ETF may pass with limited bad years when its average return is high."""
+def test_screen_requires_minimum_history_and_average_return() -> None:
+    """An ETF must have enough usable years and clear the average return hurdle."""
     price_frame = pd.DataFrame(
         _build_price_rows(
             "MATURE",
@@ -170,13 +188,13 @@ def test_screen_can_allow_limited_bad_years_after_minimum_history() -> None:
             },
         )
         + _build_price_rows(
-            "TOO_MANY_BAD",
+            "LOW_AVERAGE_RETURN",
             {
-                2020: (100.0, 110.0),
+                2020: (100.0, 101.0),
                 2021: (100.0, 101.0),
                 2022: (100.0, 101.0),
                 2023: (100.0, 101.0),
-                2024: (100.0, 120.0),
+                2024: (100.0, 101.0),
             },
         )
         + _build_price_rows(
@@ -188,18 +206,16 @@ def test_screen_can_allow_limited_bad_years_after_minimum_history() -> None:
         )
     )
 
-    result = screen_etfs_by_yearly_return(
+    result = screen_etfs_by_drawdown(
         price_frame=price_frame,
-        min_yearly_return=0.02,
+        min_drawdown=-0.50,
         min_average_yearly_return=0.04,
         min_trading_days_per_year=2,
         min_years=5,
-        max_bad_years=2,
     )
 
     assert result["ticker"].tolist() == ["MATURE"]
-    assert result.loc[0, "bad_years"] == 2
-    assert math.isclose(result.loc[0, "bad_year_fraction"], 0.4)
+    assert math.isclose(result.loc[0, "min_yearly_return"], 0.01)
 
 
 def test_screen_uses_full_history_after_minimum_years() -> None:
@@ -243,13 +259,12 @@ def test_screen_uses_full_history_after_minimum_years() -> None:
         )
     )
 
-    result = screen_etfs_by_yearly_return(
+    result = screen_etfs_by_drawdown(
         price_frame=price_frame,
-        min_yearly_return=-0.01,
+        min_drawdown=-0.15,
         min_average_yearly_return=0.03,
         min_trading_days_per_year=2,
         min_years=5,
-        max_bad_years=0,
     )
 
     assert result["ticker"].tolist() == ["FULL_PASS"]

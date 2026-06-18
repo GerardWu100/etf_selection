@@ -1,13 +1,12 @@
-"""Screen ETFs by calendar-year returns and weekly volatility.
+"""Screen ETFs by drawdown, calendar-year returns, and weekly volatility.
 
 This module implements a deliberately auditable screen:
 
 1. Convert the long daily close table into per-ticker calendar-year returns.
 2. Keep only ETF-years with enough daily observations to count as a usable year.
-3. Count how many usable years fall below the minimum yearly return.
-4. Keep only ETFs with an acceptable number of below-threshold years.
-5. Keep only ETFs whose average calendar-year return clears the average hurdle.
-6. Rank the survivors by weekly log-return volatility from lowest to highest.
+3. Keep only ETFs whose full-history maximum drawdown is not too deep.
+4. Keep only ETFs whose average calendar-year return clears the average hurdle.
+5. Rank the survivors by weekly log-return volatility from lowest to highest.
 
 Return convention
 -----------------
@@ -23,9 +22,13 @@ The weekly close is the last observed close in each calendar week. Weeks with
 no observation for a ticker are skipped for that ticker, so the volatility
 calculation uses consecutive observed weekly closes.
 
+Maximum drawdown is the worst percentage loss from a prior weekly close peak:
+
+    drawdown_t = weekly_close_t / max(weekly_close_1, ..., weekly_close_t) - 1
+
 The project already uses log returns for daily risk calculations, while simple
-calendar-year returns are easier to read for screening hurdles like -1 percent
-per year and 3 percent average per year.
+calendar-year returns are easier to read for screening hurdles like 3 percent
+average per year.
 """
 
 from __future__ import annotations
@@ -38,11 +41,10 @@ import pandas as pd
 from data_pipeline.paths import PRICE_PARQUET
 
 WEEKS_PER_YEAR = 52
-DEFAULT_MIN_YEARLY_RETURN = -0.01
+DEFAULT_MIN_DRAWDOWN = -0.15
 DEFAULT_MIN_AVERAGE_YEARLY_RETURN = 0.03
 DEFAULT_MIN_TRADING_DAYS_PER_YEAR = 200
 DEFAULT_MIN_YEARS = 5
-DEFAULT_MAX_BAD_YEARS = 0
 
 REQUIRED_PRICE_COLUMNS = ("ticker", "date", "close_price")
 SCREEN_SUMMARY_COLUMNS = [
@@ -51,10 +53,9 @@ SCREEN_SUMMARY_COLUMNS = [
     "start_year",
     "end_year",
     "years_observed",
-    "bad_years",
-    "bad_year_fraction",
     "min_yearly_return",
     "average_yearly_return",
+    "max_drawdown",
     "weekly_volatility",
     "annualized_weekly_volatility",
     "n_weekly_returns",
@@ -241,23 +242,61 @@ def compute_weekly_volatility(price_frame: pd.DataFrame) -> pd.DataFrame:
     return volatility.dropna(subset=["weekly_volatility"]).reset_index(drop=True)
 
 
-def screen_etfs_by_yearly_return(
+def compute_drawdown_metrics(price_frame: pd.DataFrame) -> pd.DataFrame:
+    """Compute full-history weekly maximum drawdown for each ticker.
+
+    Parameters
+    ----------
+    price_frame : pd.DataFrame
+        Clean or raw long daily close table with `ticker`, `date`, and
+        `close_price` columns.
+
+    Returns
+    -------
+    pd.DataFrame
+        One row per ticker with `ticker` and `max_drawdown`. The value is a
+        decimal percentage, so -0.15 means a 15 percent peak-to-trough loss.
+    """
+    clean = prepare_price_frame(price_frame)
+    price_wide = clean.pivot(index="date", columns="ticker", values="close_price")
+    price_wide = price_wide.sort_index()
+    weekly_close = price_wide.resample("W-FRI").last()
+
+    max_drawdown_by_ticker = {}
+    for ticker in weekly_close.columns:
+        # Use the same weekly-close convention as weekly volatility. Empty
+        # weeks are ignored per ticker so sparse histories do not create false
+        # zero-return periods or artificial drawdown breaks.
+        ticker_weekly_close = weekly_close[ticker].dropna()
+        running_peak = ticker_weekly_close.cummax()
+        drawdown = ticker_weekly_close / running_peak - 1.0
+        max_drawdown_by_ticker[ticker] = float(drawdown.min())
+
+    drawdowns = pd.DataFrame(
+        {
+            "ticker": list(max_drawdown_by_ticker.keys()),
+            "max_drawdown": list(max_drawdown_by_ticker.values()),
+        }
+    )
+    return drawdowns.dropna(subset=["max_drawdown"]).reset_index(drop=True)
+
+
+def screen_etfs_by_drawdown(
     price_frame: pd.DataFrame,
-    min_yearly_return: float = DEFAULT_MIN_YEARLY_RETURN,
+    min_drawdown: float = DEFAULT_MIN_DRAWDOWN,
     min_average_yearly_return: float = DEFAULT_MIN_AVERAGE_YEARLY_RETURN,
     min_trading_days_per_year: int = DEFAULT_MIN_TRADING_DAYS_PER_YEAR,
     min_years: int = DEFAULT_MIN_YEARS,
-    max_bad_years: int = DEFAULT_MAX_BAD_YEARS,
 ) -> pd.DataFrame:
-    """Screen ETFs by yearly return hurdles and rank by weekly volatility.
+    """Screen ETFs by drawdown and average return, then rank by weekly volatility.
 
     Parameters
     ----------
     price_frame : pd.DataFrame
         Long daily close table with `ticker`, `date`, and `close_price`.
-    min_yearly_return : float, default -0.01
-        Simple return threshold used to count bad years. A value of -0.01
-        means -1 percent.
+    min_drawdown : float, default -0.15
+        Maximum-drawdown floor. A value of -0.15 means an ETF must not have
+        lost more than 15 percent from a prior weekly close peak.
     min_average_yearly_return : float, default 0.03
         Minimum average simple calendar-year return. A value of 0.03 means
         3 percent.
@@ -267,24 +306,19 @@ def screen_etfs_by_yearly_return(
     min_years : int, default 5
         Minimum number of usable calendar years required for an ETF to pass.
         If a ticker has more usable history, all usable years are evaluated.
-    max_bad_years : int, default 0
-        Maximum number of usable calendar years allowed below
-        `min_yearly_return`. Set to 0 for the strict rule that every usable
-        year must clear the yearly threshold.
-
     Returns
     -------
     pd.DataFrame
         Passing ETFs ranked from lowest to highest weekly volatility. Columns:
         `rank`, `ticker`, `start_year`, `end_year`, `years_observed`,
-        `bad_years`, `bad_year_fraction`, `min_yearly_return`,
-        `average_yearly_return`, `weekly_volatility`,
+        `min_yearly_return`, `average_yearly_return`, `max_drawdown`,
+        `weekly_volatility`,
         `annualized_weekly_volatility`, and `n_weekly_returns`.
     """
     if min_years < 1:
         raise ValueError("min_years must be at least 1.")
-    if max_bad_years < 0:
-        raise ValueError("max_bad_years must be at least 0.")
+    if min_drawdown > 0.0:
+        raise ValueError("min_drawdown must be less than or equal to 0.")
 
     yearly_returns = compute_yearly_returns(
         price_frame=price_frame,
@@ -299,23 +333,22 @@ def screen_etfs_by_yearly_return(
             start_year=("year", "min"),
             end_year=("year", "max"),
             years_observed=("year", "count"),
-            bad_years=(
-                "yearly_return",
-                lambda returns: int((returns < min_yearly_return).sum()),
-            ),
             min_yearly_return=("yearly_return", "min"),
             average_yearly_return=("yearly_return", "mean"),
         )
         .reset_index()
     )
-    yearly_summary["bad_year_fraction"] = (
-        yearly_summary["bad_years"] / yearly_summary["years_observed"]
-    )
 
-    passing = yearly_summary[
-        (yearly_summary["years_observed"] >= min_years)
-        & (yearly_summary["bad_years"] <= max_bad_years)
-        & (yearly_summary["average_yearly_return"] >= min_average_yearly_return)
+    drawdowns = compute_drawdown_metrics(price_frame)
+    summary_with_drawdowns = yearly_summary.merge(drawdowns, on="ticker", how="inner")
+
+    passing = summary_with_drawdowns[
+        (summary_with_drawdowns["years_observed"] >= min_years)
+        & (summary_with_drawdowns["max_drawdown"] >= min_drawdown)
+        & (
+            summary_with_drawdowns["average_yearly_return"]
+            >= min_average_yearly_return
+        )
     ].copy()
 
     if passing.empty:
@@ -336,11 +369,10 @@ def screen_etfs_by_yearly_return(
 
 def build_screen_outputs(
     price_parquet: Path = PRICE_PARQUET,
-    min_yearly_return: float = DEFAULT_MIN_YEARLY_RETURN,
+    min_drawdown: float = DEFAULT_MIN_DRAWDOWN,
     min_average_yearly_return: float = DEFAULT_MIN_AVERAGE_YEARLY_RETURN,
     min_trading_days_per_year: int = DEFAULT_MIN_TRADING_DAYS_PER_YEAR,
     min_years: int = DEFAULT_MIN_YEARS,
-    max_bad_years: int = DEFAULT_MAX_BAD_YEARS,
 ) -> tuple[pd.DataFrame, pd.DataFrame]:
     """Load prices and build both summary and per-year screen outputs.
 
@@ -348,8 +380,9 @@ def build_screen_outputs(
     ----------
     price_parquet : Path, default PRICE_PARQUET
         Parquet file containing daily close prices.
-    min_yearly_return : float, default -0.01
-        Simple calendar-year return threshold used to count bad years.
+    min_drawdown : float, default -0.15
+        Maximum-drawdown floor. A value of -0.15 means an ETF must not have
+        lost more than 15 percent from a prior weekly close peak.
     min_average_yearly_return : float, default 0.03
         Minimum average simple calendar-year return.
     min_trading_days_per_year : int, default 200
@@ -357,9 +390,6 @@ def build_screen_outputs(
     min_years : int, default 5
         Minimum number of usable calendar years required for an ETF to pass.
         If a ticker has more usable history, all usable years are evaluated.
-    max_bad_years : int, default 0
-        Maximum number of usable years allowed below `min_yearly_return`.
-
     Returns
     -------
     summary : pd.DataFrame
@@ -372,12 +402,11 @@ def build_screen_outputs(
         price_frame=prices,
         min_trading_days_per_year=min_trading_days_per_year,
     )
-    summary = screen_etfs_by_yearly_return(
+    summary = screen_etfs_by_drawdown(
         price_frame=prices,
-        min_yearly_return=min_yearly_return,
+        min_drawdown=min_drawdown,
         min_average_yearly_return=min_average_yearly_return,
         min_trading_days_per_year=min_trading_days_per_year,
         min_years=min_years,
-        max_bad_years=max_bad_years,
     )
     return summary, yearly_returns

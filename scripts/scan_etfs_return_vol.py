@@ -1,4 +1,4 @@
-"""Run the ETF yearly-return and weekly-volatility screen.
+"""Run the ETF drawdown, yearly-return, and weekly-volatility screen.
 
 The script is intentionally thin. Reusable calculations live in
 `src/etf_screening/yearly_return_screen.py`; this file only parses command-line
@@ -13,11 +13,10 @@ from pathlib import Path
 
 from data_pipeline.paths import PRICE_PARQUET, PROJECT_ROOT
 from etf_screening.yearly_return_screen import (
+    DEFAULT_MIN_DRAWDOWN,
     DEFAULT_MIN_AVERAGE_YEARLY_RETURN,
     DEFAULT_MIN_TRADING_DAYS_PER_YEAR,
-    DEFAULT_MIN_YEARLY_RETURN,
     DEFAULT_MIN_YEARS,
-    DEFAULT_MAX_BAD_YEARS,
     build_screen_outputs,
 )
 
@@ -29,9 +28,9 @@ def parse_args() -> argparse.Namespace:
     """Parse command-line options for the ETF screen."""
     parser = argparse.ArgumentParser(
         description=(
-            "Screen ETFs with enough usable calendar years, limited "
-            "below-threshold years, a minimum average calendar-year return, "
-            "and rank survivors by weekly log-return volatility."
+            "Screen ETFs with enough usable calendar years, a maximum-drawdown "
+            "floor, a minimum average calendar-year return, and rank survivors "
+            "by weekly log-return volatility."
         )
     )
     parser.add_argument(
@@ -52,10 +51,13 @@ def parse_args() -> argparse.Namespace:
         help="Output filename tag. Defaults to today's date plus a sequence number.",
     )
     parser.add_argument(
-        "--min-yearly-return",
+        "--min-drawdown",
         type=float,
-        default=DEFAULT_MIN_YEARLY_RETURN,
-        help="Simple yearly return threshold used to count bad years.",
+        default=DEFAULT_MIN_DRAWDOWN,
+        help=(
+            "Maximum-drawdown floor. For example, -0.15 keeps ETFs whose "
+            "weekly max drawdown is not worse than -15 percent."
+        ),
     )
     parser.add_argument(
         "--min-average-yearly-return",
@@ -79,12 +81,6 @@ def parse_args() -> argparse.Namespace:
             "history."
         ),
     )
-    parser.add_argument(
-        "--max-bad-years",
-        type=int,
-        default=DEFAULT_MAX_BAD_YEARS,
-        help="Maximum usable years allowed below --min-yearly-return.",
-    )
     return parser.parse_args()
 
 
@@ -106,11 +102,10 @@ def main() -> None:
 
     summary, yearly_returns = build_screen_outputs(
         price_parquet=args.price_parquet,
-        min_yearly_return=args.min_yearly_return,
+        min_drawdown=args.min_drawdown,
         min_average_yearly_return=args.min_average_yearly_return,
         min_trading_days_per_year=args.min_trading_days_per_year,
         min_years=args.min_years,
-        max_bad_years=args.max_bad_years,
     )
 
     summary_path = output_dir / f"etf_return_vol_screen_{run_tag}.csv"

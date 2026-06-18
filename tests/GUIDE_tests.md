@@ -31,6 +31,11 @@ tests/
   - log-return threshold semantics
   - average yearly log-return calculations
 
+- `tests/unit/etf_screening/test_yearly_return_screen.py`
+  - calendar-year return summaries
+  - weekly volatility from last observed weekly closes
+  - weekly maximum-drawdown screen behavior
+
 - `tests/unit/feature_engineering/test_pipeline_components.py`
   - session classification
   - prior-session primitives

@@ -9,7 +9,7 @@ The current default screen keeps ETFs that satisfy:
 - at least five usable calendar years
 - all usable calendar years are evaluated when an ETF has more than five usable
   years
-- no usable calendar years below a -1 percent simple return
+- weekly maximum drawdown no worse than -15 percent
 - average usable calendar-year simple return of at least 3 percent over the
   evaluated history
 
@@ -40,14 +40,25 @@ CSV values are written to three decimal places.
   - per-ticker, per-calendar-year detail table used by the earlier screen
 
 - `etf_return_vol_screen_2026-06-17_003.csv`
-  - current default ranked passing ETF summary after switching to weekly
-    volatility, a -1 percent minimum yearly return, and zero allowed bad years
-  - contains 7 passing ETFs
+  - earlier ranked passing ETF summary after switching to weekly volatility
+    ranking and three-decimal CSV output
   - key columns: `rank`, `ticker`, `years_observed`, `bad_years`,
     `min_yearly_return`, `average_yearly_return`, `weekly_volatility`,
     `annualized_weekly_volatility`
 
 - `etf_yearly_returns_2026-06-17_003.csv`
+  - per-ticker, per-calendar-year detail table used by the earlier default
+    screen
+
+- `etf_return_vol_screen_2026-06-18_001.csv`
+  - current default ranked passing ETF summary after replacing the minimum
+    yearly return / bad-year screen with a weekly max drawdown screen
+  - contains 12 passing ETFs
+  - key columns: `rank`, `ticker`, `years_observed`, `min_yearly_return`,
+    `average_yearly_return`, `max_drawdown`, `weekly_volatility`,
+    `annualized_weekly_volatility`
+
+- `etf_yearly_returns_2026-06-18_001.csv`
   - per-ticker, per-calendar-year detail table used by the current default
     screen
 
@@ -67,3 +78,5 @@ CSV values are written to three decimal places.
   latest five usable calendar years.
 - 2026-06-17: Reverted the current output rule to full usable history for ETFs
   with more than five usable years and rounded CSV floats to three decimals.
+- 2026-06-18: Replaced the minimum yearly return / bad-year screen with a
+  weekly maximum-drawdown floor.
