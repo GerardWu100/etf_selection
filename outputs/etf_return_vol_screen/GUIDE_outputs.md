@@ -70,6 +70,12 @@ CSV values are written to three decimal places.
 - `weekly_correlation_heatmap_2026-06-18_001.png`
   - colored heatmap version of the same common-date weekly correlation matrix
 
+- `trading_volume_2025_2026-06-18_001.csv`
+  - 2025 trading-volume summary for `JPST`, `JAAA`, `SGOV`, `PULS`, `STIP`,
+    `VNLA`, and `VTIP`
+  - includes total volume, average daily volume, median daily volume, minimum
+    daily volume, maximum daily volume, and trading-day count
+
 ## Part 3: Short Journal
 
 - 2026-06-17: Added the first return-volatility ETF screen output with default
