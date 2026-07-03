@@ -18,6 +18,7 @@ tests/
 │   ├── correlation_analysis/
 │   └── feature_engineering/
 ├── integration/
+│   └── test_allocation_notebook.py
 └── data/
 ```
 
@@ -42,9 +43,14 @@ tests/
   - as-of context joins
   - future-only label generation
 
+- `tests/integration/test_allocation_notebook.py`
+  - clean top-to-bottom execution of the allocation walkthrough
+  - embedded Portable Network Graphics (PNG) output for all eight charts
+
 ## How To Run
 
 - `uv run pytest`
 - `uv run pytest tests/unit/backtesting/test_buy_and_hold.py`
 - `uv run pytest tests/unit/correlation_analysis/test_log_return_filters.py`
 - `uv run pytest tests/unit/feature_engineering/test_pipeline_components.py`
+- `uv run pytest tests/integration/test_allocation_notebook.py`

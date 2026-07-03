@@ -13,7 +13,11 @@ The active walkthrough set lives under `notebooks/01_project_walkthrough/`.
   - Offline review of the selection stage from local artifacts.
 
 - `explore_allocation_methods.ipynb`
-  - Manual comparison of long-only allocation rules.
+  - Manual comparison of seven long-only allocation rules using the shared
+    local price parquet when ClickHouse credentials are unavailable.
+  - Restores Jupyter's inline Matplotlib backend after importing shared
+    script-oriented utilities, so its eight charts remain visible in both an
+    interactive kernel and an executed notebook.
 
 - `explore_buy_and_hold.ipynb`
   - Buy-and-hold evaluation of a chosen basket.
@@ -27,3 +31,6 @@ The active walkthrough set lives under `notebooks/01_project_walkthrough/`.
 ## Part 3: Short Journal
 
 - 2026-04-16: The notebooks were centralized under a root `notebooks/` tree so the source folders stay code-focused.
+- 2026-07-02: The allocation walkthrough now overrides the shared headless
+  plotting backend inside Jupyter so `plt.show()` embeds charts instead of
+  emitting non-interactive-backend warnings.

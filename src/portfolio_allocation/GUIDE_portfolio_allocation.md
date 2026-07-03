@@ -95,10 +95,12 @@ portfolio_allocation/
 ├── risk_parity.py                  -- Equal-risk-contribution optimizer.
 ├── max_diversification.py          -- Diversification-ratio optimizer.
 ├── hrp.py                          -- Hierarchical Risk Parity weights.
-├── min_cvar.py                     -- Minimum-CVaR optimizer.
-├── explore_allocation_methods.ipynb -- Notebook entrypoint for comparison.
-└── outputs/                        -- Historical charts and CSV artifacts.
+└── min_cvar.py                     -- Minimum-CVaR optimizer.
 ```
+
+The human-facing comparison entrypoint is
+`notebooks/01_project_walkthrough/explore_allocation_methods.ipynb` at the
+repository root, not inside this source package.
 
 ### `allocation_utils.py`
 
@@ -142,12 +144,16 @@ used by notebook code.
 What it does:
 Acts as the main workflow for this folder. The notebook uses a manually edited
 ticker list, builds one shared log-return panel, runs each allocation method,
-and compares the resulting weights and summary statistics side by side.
+and compares the resulting weights and summary statistics side by side. It
+restores Jupyter's inline plotting backend after importing the shared
+script-oriented utilities so charts are embedded in notebook output.
 
 ## Part 3 -- Short Journal
 
 - 2026-05-19: Documented `run_slsqp_portfolio()` as the shared SLSQP shell used
   by the covariance-based optimizers.
+- 2026-07-02: Corrected the folder tree to reflect the notebook's root-level
+  location and documented its explicit inline plotting setup.
 - 2026-04-11: Rewrote the guide to match the current repo: notebook-first
   weighting workflow, method modules only, and no active `allocate.py` or
   `method_lab.py` source files.
