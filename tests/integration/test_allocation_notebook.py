@@ -24,7 +24,7 @@ def test_allocation_notebook_executes_and_embeds_charts() -> None:
     notebook_source = "\n".join(
         "".join(cell.get("source", "")) for cell in notebook.cells
     )
-    assert 'methods.mean_variance(' in notebook_source
+    assert "methods.mean_variance(" in notebook_source
     assert '_show(w, "mean_variance")' in notebook_source
 
     executor = ExecutePreprocessor(timeout=120, kernel_name="python3")
