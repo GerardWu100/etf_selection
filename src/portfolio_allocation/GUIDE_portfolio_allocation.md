@@ -31,6 +31,7 @@ The active method modules in the folder are:
 
 - equal weight, created directly in the notebook
 - minimum variance
+- mean variance with configurable risk aversion
 - maximum Sharpe
 - risk parity
 - maximum diversification
@@ -63,6 +64,22 @@ $$
 where $\sigma$ is the vector of standalone asset volatilities,
 $\sigma_i = \sqrt{\Sigma_{ii}}$.
 
+The conventional mean-variance method maximizes annualized utility:
+
+$$
+U(w) = w^\top \mu_{\text{ann}}
+- \frac{\lambda}{2}w^\top\Sigma_{\text{ann}}w
+$$
+
+where $\mu_{\text{ann}} = 252\mu$ is the annualized expected log-return
+vector, $\Sigma_{\text{ann}} = 252\Sigma$ is the annualized covariance matrix,
+and $\lambda > 0$ is the investor's risk-aversion coefficient. The notebook
+sets $\lambda$ with `RISK_AVERSION`, defaulting to `3.0`. A lower value gives
+estimated return more influence; a higher value penalizes variance more.
+There is no universal correct value because $\lambda$ represents investor
+preferences. Like maximum Sharpe, this method can be unstable when sample mean
+returns are poor estimates of future returns.
+
 ### Bound handling and feasibility
 
 The shared helper `allocation_utils.apply_weight_bounds()` projects raw weight
@@ -91,6 +108,7 @@ portfolio_allocation/
 ├── __init__.py                     -- Strategy registry and package exports.
 ├── allocation_utils.py             -- Shared bound validation and projection.
 ├── min_variance.py                 -- Minimum-variance optimizer.
+├── mean_variance.py                -- Return-minus-variance optimizer.
 ├── max_sharpe.py                   -- Maximum-Sharpe optimizer.
 ├── risk_parity.py                  -- Equal-risk-contribution optimizer.
 ├── max_diversification.py          -- Diversification-ratio optimizer.
@@ -127,6 +145,7 @@ function-level interface.
 Key functions:
 
 - `min_variance.min_variance()`
+- `mean_variance.mean_variance()`
 - `max_sharpe.max_sharpe()`
 - `risk_parity.risk_parity()`
 - `max_diversification.max_diversification()`
@@ -150,6 +169,9 @@ script-oriented utilities so charts are embedded in notebook output.
 
 ## Part 3 -- Short Journal
 
+- 2026-07-03: Added conventional mean-variance utility with notebook-level
+  risk aversion set to `3.0`; the value is configurable because it represents
+  investor preferences rather than a universal market constant.
 - 2026-05-19: Documented `run_slsqp_portfolio()` as the shared SLSQP shell used
   by the covariance-based optimizers.
 - 2026-07-02: Corrected the folder tree to reflect the notebook's root-level

@@ -20,6 +20,7 @@ project.
 |---|---|---|---|---|---|
 | Equal weight | $w_i = 1/N$ | Very simple, low model risk | Ignores risk differences | You want robust baseline | You need risk-balanced sleeves |
 | Min variance | Minimize $w^\top \Sigma w$ | Strong volatility control | Can underweight growth | Drawdown/vol control first | You need stronger return-seeking tilt |
+| Mean variance | Maximize return minus a variance penalty | Configurable return-risk trade-off | Sensitive to expected-return estimates and risk-aversion choice | You can state risk tolerance and accept estimation risk | Return forecasts are noisy or risk tolerance is unknown |
 | Max Sharpe | Maximize return per unit risk | Efficient if estimates are good | Sensitive to return-estimation noise | You trust expected return estimates | Return forecasts are noisy |
 | Risk parity | Equalize risk contributions | Balanced risk allocation | Can overweight low-vol sleeves | You want balanced risk sleeves | You have strong directional conviction |
 | Max diversification | Maximize diversification ratio | Correlation-aware diversification | Not explicit tail-loss control | You prioritize structural diversification | Tail-risk control is primary goal |
@@ -147,7 +148,23 @@ $$
 w^\top \Sigma w
 $$
 
-### 3. Maximum Sharpe (`max_sharpe.py`)
+### 3. Mean Variance (`mean_variance.py`)
+
+Maximize annualized mean-variance utility:
+
+$$
+U(w) = w^\top (252\mu)
+- \frac{\lambda}{2}w^\top(252\Sigma)w
+$$
+
+where $w$ is the portfolio weight vector, $\mu$ is the daily expected
+log-return vector, $\Sigma$ is the daily covariance matrix, and $\lambda > 0$
+is the risk-aversion coefficient. The notebook defines $\lambda$ with
+`RISK_AVERSION = 3.0`. Lower values emphasize estimated return; higher values
+penalize portfolio variance more. No value is universally correct because
+$\lambda$ expresses investor preferences.
+
+### 4. Maximum Sharpe (`max_sharpe.py`)
 
 Maximize:
 
@@ -155,7 +172,7 @@ $$
 \frac{252 \cdot w^\top \mu - R_f}{\sqrt{252 \cdot w^\top \Sigma w}}
 $$
 
-### 4. Risk Parity (`risk_parity.py`)
+### 5. Risk Parity (`risk_parity.py`)
 
 Goal: equalize risk contributions.
 
@@ -165,7 +182,7 @@ Goal: equalize risk contributions.
 
 Optimize weights so $RC_i$ values are as equal as possible.
 
-### 5. Maximum Diversification (`max_diversification.py`)
+### 6. Maximum Diversification (`max_diversification.py`)
 
 Maximize diversification ratio:
 
@@ -175,24 +192,24 @@ $$
 
 where $\sigma$ is the vector of individual asset volatilities.
 
-### 6. Hierarchical Risk Parity (`hrp.py`)
+### 7. Hierarchical Risk Parity (`hrp.py`)
 
 1. Cluster by distance tree.
 2. Quasi-diagonalize covariance by leaf order.
 3. Recursively split clusters and allocate inversely to cluster variance.
 
-### 7. Black-Litterman (`black_litterman.py`)
+### 8. Black-Litterman (`black_litterman.py`)
 
 1. Build equilibrium implied returns from market weights.
 2. Blend prior with optional views via Bayesian update.
 3. Optimize Sharpe using posterior mean and combined covariance.
 
-### 8. Black-Litterman + Momentum (`bl_momentum.py`)
+### 9. Black-Litterman + Momentum (`bl_momentum.py`)
 
 Same as Black-Litterman, but views are built from trailing average returns
 (momentum signal).
 
-### 9. Minimum CVaR (`min_cvar.py`)
+### 10. Minimum CVaR (`min_cvar.py`)
 
 Uses Rockafellar-Uryasev formulation:
 
@@ -204,7 +221,7 @@ $$
 
 where $\alpha$ is the confidence level (for example, $0.95$).
 
-### 10. Fractional Kelly (`kelly_criterion.py`)
+### 11. Fractional Kelly (`kelly_criterion.py`)
 
 Quadratic approximation for fractional Kelly utility:
 
@@ -218,7 +235,7 @@ where:
 - $\mu_p = 252 \cdot w^\top \mu$
 - $\sigma_p^2 = 252 \cdot w^\top \Sigma w$
 
-### 11. Robust Mean-Variance (`robust_mean_variance.py`)
+### 12. Robust Mean-Variance (`robust_mean_variance.py`)
 
 Maximizes worst-case utility under mean-estimation uncertainty:
 
@@ -228,14 +245,14 @@ $$
 
 with uncertainty radius scaled by chi-square confidence.
 
-### 12. Shrinkage Sharpe (`shrinkage_sharpe.py`)
+### 13. Shrinkage Sharpe (`shrinkage_sharpe.py`)
 
 1. Shrink sample covariance toward scaled identity (Ledoit-Wolf style).
 2. Maximize Sharpe using shrunk covariance.
 
 ## Practical Use
 
-- For quick baseline: `equal_weight`, `min_variance`, `max_sharpe`, `risk_parity`
+- For quick baseline: `equal_weight`, `min_variance`, `mean_variance`, `max_sharpe`, `risk_parity`
 - For tail protection focus: `min_cvar`
 - For estimation-noise robustness: `hrp`, `max_diversification`
 
@@ -388,6 +405,23 @@ Use when:
 Avoid when:
 
 - You need higher return-seeking behavior.
+
+### Mean Variance
+
+Example:
+
+- With `RISK_AVERSION = 3.0`, a possible output is
+  `[30%, 20%, 35%, 15%]`; the exact result depends on estimated means and
+  covariances.
+
+Use when:
+
+- You want one portfolio reflecting an explicit return-risk preference.
+
+Avoid when:
+
+- Historical mean returns are too noisy to serve as return forecasts.
+- You cannot justify a risk-aversion coefficient.
 
 ### Maximum Sharpe
 

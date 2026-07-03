@@ -16,7 +16,8 @@ tests/
 ├── unit/
 │   ├── backtesting/
 │   ├── correlation_analysis/
-│   └── feature_engineering/
+│   ├── feature_engineering/
+│   └── portfolio_allocation/
 ├── integration/
 │   ├── test_allocation_notebook.py
 │   └── test_selection_notebook.py
@@ -44,9 +45,15 @@ tests/
   - as-of context joins
   - future-only label generation
 
+- `tests/unit/portfolio_allocation/test_mean_variance.py`
+  - feasible long-only mean-variance weights
+  - the effect of risk aversion on portfolio variance
+  - invalid risk-aversion handling and strategy registration
+
 - `tests/integration/test_allocation_notebook.py`
   - clean top-to-bottom execution of the allocation walkthrough
-  - embedded Portable Network Graphics (PNG) output for all eight charts
+  - mean-variance source contract
+  - embedded Portable Network Graphics (PNG) output for all nine charts
 
 - `tests/integration/test_selection_notebook.py`
   - Jupyter schema validation for the selection walkthrough
@@ -58,4 +65,5 @@ tests/
 - `uv run pytest tests/unit/backtesting/test_buy_and_hold.py`
 - `uv run pytest tests/unit/correlation_analysis/test_log_return_filters.py`
 - `uv run pytest tests/unit/feature_engineering/test_pipeline_components.py`
+- `uv run pytest tests/unit/portfolio_allocation/test_mean_variance.py`
 - `uv run pytest tests/integration/test_allocation_notebook.py`

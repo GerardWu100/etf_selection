@@ -9,6 +9,7 @@ import methods directly from `portfolio_allocation`.
 from .hrp import hrp_weights
 from .max_diversification import max_diversification
 from .max_sharpe import max_sharpe
+from .mean_variance import mean_variance
 from .min_cvar import min_cvar
 from .min_variance import min_variance
 from .risk_parity import risk_parity
@@ -17,6 +18,7 @@ from .risk_parity import risk_parity
 # and notebooks can expose simpler defaults without hardcoding names twice.
 CLASSIC_STRATEGY_NAMES = [
     "min_variance",
+    "mean_variance",
     "max_sharpe",
     "risk_parity",
     "max_diversification",
@@ -33,6 +35,7 @@ ALL_STRATEGY_NAMES = CLASSIC_STRATEGY_NAMES + ADVANCED_STRATEGY_NAMES
 # concrete optimizer from a stable strategy name.
 STRATEGY_FUNCTIONS = {
     "min_variance": min_variance,
+    "mean_variance": mean_variance,
     "max_sharpe": max_sharpe,
     "risk_parity": risk_parity,
     "max_diversification": max_diversification,
@@ -50,6 +53,7 @@ __all__ = [
     "hrp_weights",
     "max_diversification",
     "max_sharpe",
+    "mean_variance",
     "min_cvar",
     "min_variance",
     "risk_parity",

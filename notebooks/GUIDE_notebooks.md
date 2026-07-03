@@ -15,10 +15,12 @@ The active walkthrough set lives under `notebooks/01_project_walkthrough/`.
     repository root without relying on saved kernel state.
 
 - `explore_allocation_methods.ipynb`
-  - Manual comparison of seven long-only allocation rules using the shared
+  - Manual comparison of eight long-only allocation rules using the shared
     local price parquet when ClickHouse credentials are unavailable.
+  - Exposes the mean-variance risk-aversion coefficient as `RISK_AVERSION`
+    beside the notebook's other tunable settings.
   - Restores Jupyter's inline Matplotlib backend after importing shared
-    script-oriented utilities, so its eight charts remain visible in both an
+    script-oriented utilities, so its nine charts remain visible in both an
     interactive kernel and an executed notebook.
 
 - `explore_buy_and_hold.ipynb`
@@ -32,6 +34,9 @@ The active walkthrough set lives under `notebooks/01_project_walkthrough/`.
 
 ## Part 3: Short Journal
 
+- 2026-07-03: Added conventional mean-variance allocation with a configurable
+  notebook-level risk-aversion coefficient and expanded the comparison to
+  eight strategies and nine charts.
 - 2026-04-16: The notebooks were centralized under a root `notebooks/` tree so the source folders stay code-focused.
 - 2026-07-02: The allocation walkthrough now overrides the shared headless
   plotting backend inside Jupyter so `plt.show()` embeds charts instead of
