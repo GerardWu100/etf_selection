@@ -18,7 +18,8 @@ tests/
 │   ├── correlation_analysis/
 │   └── feature_engineering/
 ├── integration/
-│   └── test_allocation_notebook.py
+│   ├── test_allocation_notebook.py
+│   └── test_selection_notebook.py
 └── data/
 ```
 
@@ -46,6 +47,10 @@ tests/
 - `tests/integration/test_allocation_notebook.py`
   - clean top-to-bottom execution of the allocation walkthrough
   - embedded Portable Network Graphics (PNG) output for all eight charts
+
+- `tests/integration/test_selection_notebook.py`
+  - Jupyter schema validation for the selection walkthrough
+  - clean top-to-bottom execution from the repository root
 
 ## How To Run
 

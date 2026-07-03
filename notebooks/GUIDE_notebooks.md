@@ -11,6 +11,8 @@ The active walkthrough set lives under `notebooks/01_project_walkthrough/`.
 
 - `explore_selection_methods.ipynb`
   - Offline review of the selection stage from local artifacts.
+  - Imports shared paths from `data_pipeline.paths` and executes from the
+    repository root without relying on saved kernel state.
 
 - `explore_allocation_methods.ipynb`
   - Manual comparison of seven long-only allocation rules using the shared
@@ -34,3 +36,5 @@ The active walkthrough set lives under `notebooks/01_project_walkthrough/`.
 - 2026-07-02: The allocation walkthrough now overrides the shared headless
   plotting backend inside Jupyter so `plt.show()` embeds charts instead of
   emitting non-interactive-backend warnings.
+- 2026-07-02: The selection walkthrough's stale, schema-invalid outputs were
+  discarded and regenerated from a clean top-to-bottom execution.
