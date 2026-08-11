@@ -4,7 +4,6 @@ The screen is intentionally small, but the calendar-year logic is easy to get
 wrong. These tests use toy prices with known yearly returns so the hurdle and
 ranking rules stay explicit.
 """
-# ruff: noqa: E402
 
 from __future__ import annotations
 
@@ -20,8 +19,8 @@ if str(SRC_ROOT) not in sys.path:
     sys.path.insert(0, str(SRC_ROOT))
 
 from etf_screening.yearly_return_screen import (
-    DEFAULT_MIN_DRAWDOWN,
     DEFAULT_MIN_AVERAGE_YEARLY_RETURN,
+    DEFAULT_MIN_DRAWDOWN,
     compute_drawdown_metrics,
     compute_weekly_volatility,
     screen_etfs_by_drawdown,

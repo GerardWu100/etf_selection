@@ -6,11 +6,11 @@ Per-symbol feature registry with explicit timeframe handling.
 
 from __future__ import annotations
 
-from typing import Any, Callable
+from collections.abc import Callable
+from typing import Any
 
 import numpy as np
 import pandas as pd
-
 
 # Registry functions share one callable signature for config-driven execution.
 FeatureFunction = Callable[[pd.DataFrame, dict[str, Any]], pd.Series]

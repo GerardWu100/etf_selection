@@ -42,7 +42,9 @@ the negative annualized utility:
 ```python
 annual_mean = mean_ret * TRADING_DAYS_PER_YEAR
 annual_cov = cov * TRADING_DAYS_PER_YEAR
-objective = -(weights @ annual_mean - 0.5 * risk_aversion * weights @ annual_cov @ weights)
+objective = -(
+    weights @ annual_mean - 0.5 * risk_aversion * weights @ annual_cov @ weights
+)
 ```
 
 Validate that risk aversion is finite and strictly positive, then call

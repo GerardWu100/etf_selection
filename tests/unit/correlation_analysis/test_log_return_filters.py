@@ -3,7 +3,6 @@
 These tests pin down the repo convention that selection hurdles are expressed
 in log-return units, not simple-return percentages.
 """
-# ruff: noqa: E402
 
 from __future__ import annotations
 

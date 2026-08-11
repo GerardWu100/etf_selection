@@ -9,11 +9,10 @@ available.
 
 from __future__ import annotations
 
-from pathlib import Path
 import sys
+from pathlib import Path
 
 import pandas as pd
-
 from data_pipeline.paths import (
     CORRELATION_OUTPUT_DIR,
     PRICE_PARQUET,

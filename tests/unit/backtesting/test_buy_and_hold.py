@@ -3,7 +3,6 @@
 These tests protect the exact portfolio-valuation path used by the notebook
 workflow and ensure the checked-in notebook file remains parseable JSON.
 """
-# ruff: noqa: E402
 
 from __future__ import annotations
 

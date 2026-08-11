@@ -10,7 +10,6 @@ from typing import Any
 
 import pandas as pd
 
-
 # These fields are coerced uniformly so downstream math sees stable dtypes.
 NUMERIC_COLUMNS = [
     "open",

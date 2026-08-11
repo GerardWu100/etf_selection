@@ -172,7 +172,7 @@ def select_by_kmedoids(
         medoid_rows.append(
             {
                 "ticker": medoid_ticker,
-                "cluster_size": int(len(cluster_members)),
+                "cluster_size": len(cluster_members),
                 "avg_cluster_distance": float(cluster_distance.mean()),
                 "is_anchor_medoid": int(medoid_ticker in anchor_set),
             }

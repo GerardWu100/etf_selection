@@ -37,7 +37,6 @@ from pathlib import Path
 
 import numpy as np
 import pandas as pd
-
 from data_pipeline.paths import PRICE_PARQUET
 
 WEEKS_PER_YEAR = 52

@@ -7,9 +7,8 @@ from __future__ import annotations
 import os
 
 import clickhouse_connect
-from dotenv import load_dotenv
-
 from data_pipeline.paths import ENV_PATH
+from dotenv import load_dotenv
 
 
 def build_client() -> clickhouse_connect.driver.Client:

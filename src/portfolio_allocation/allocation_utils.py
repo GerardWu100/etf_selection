@@ -7,9 +7,8 @@ from __future__ import annotations
 from collections.abc import Callable
 
 import numpy as np
-from scipy.optimize import minimize
-
 from correlation_analysis import correlate_utils as utils
+from scipy.optimize import minimize
 
 # Default lower/upper bounds used across all strategies.
 MIN_WEIGHT = 0.05

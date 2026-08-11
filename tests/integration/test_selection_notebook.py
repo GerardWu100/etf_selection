@@ -5,7 +5,6 @@ from pathlib import Path
 import nbformat
 from nbconvert.preprocessors import ExecutePreprocessor
 
-
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 NOTEBOOK_PATH = (
     PROJECT_ROOT

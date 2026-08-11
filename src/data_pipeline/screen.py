@@ -26,7 +26,6 @@ from __future__ import annotations
 import os
 
 import pandas as pd
-
 from data_pipeline.clickhouse_client import build_client
 from data_pipeline.paths import RAW_DATA_DIR
 from data_pipeline.sql_helpers import build_symbols_in_list
@@ -60,7 +59,7 @@ def fetch_volume_by_year(client) -> pd.DataFrame:
     years_sql = ", ".join(str(year) for year in SCREEN_YEARS)
 
     # Sum volume for each symbol across the full 2020-2025 screen window.
-    query = """
+    query = f"""
         SELECT
             symbol,
             toYear(ts)      AS year,
@@ -69,7 +68,7 @@ def fetch_volume_by_year(client) -> pd.DataFrame:
         WHERE toYear(ts) IN ({years_sql})
         GROUP BY symbol, year
         ORDER BY symbol, year
-    """.format(years_sql=years_sql)
+    """
     print("Querying ClickHouse: per-symbol volume for 2020 through 2025 ...")
     result = client.query(query)
 

@@ -3,18 +3,16 @@ cli.py
 ------
 Command-line entrypoint for the point-in-time feature-engineering pipeline.
 """
-# ruff: noqa: E402
 
 from __future__ import annotations
 
 import argparse
 import json
 import pathlib
-import tomllib
 from typing import Any
 
 import pandas as pd
-
+import tomllib
 from correlation_analysis.correlate_utils import build_client, resolve_analysis_window
 from data_pipeline.paths import PROJECT_ROOT
 from feature_engineering.cross_sectional import run_cross_sectional_features
@@ -181,19 +179,19 @@ def _write_run_audit(
             "section": "output",
             "name": "session_primitives",
             "metric": "rows",
-            "value": int(len(session_primitives)),
+            "value": len(session_primitives),
         },
         {
             "section": "output",
             "name": "enriched_context",
             "metric": "rows",
-            "value": int(len(enriched_context)),
+            "value": len(enriched_context),
         },
         {
             "section": "output",
             "name": "feature_matrix",
             "metric": "rows",
-            "value": int(len(feature_matrix)),
+            "value": len(feature_matrix),
         },
     ]
 

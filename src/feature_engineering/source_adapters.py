@@ -18,7 +18,6 @@ from typing import Any
 
 import clickhouse_connect
 import pandas as pd
-
 from correlation_analysis.correlate_utils import resolve_analysis_window
 from data_pipeline.sql_helpers import build_symbols_in_list
 

@@ -163,7 +163,7 @@ def _merge_asof_context(
         "lag": str(context_config.get("lag", "0min")),
         "max_staleness": str(context_config.get("max_staleness", "")),
         "join_on_symbol": join_on_symbol,
-        "rows": int(len(merged)),
+        "rows": len(merged),
         "null_rate": float(max(null_rates) if null_rates else 1.0),
         "stale_rate": float(stale_mask.mean()),
         "mean_effective_lag_minutes": float(age_minutes.dropna().mean())

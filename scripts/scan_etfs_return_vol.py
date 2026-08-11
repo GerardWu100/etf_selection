@@ -13,8 +13,8 @@ from pathlib import Path
 
 from data_pipeline.paths import PRICE_PARQUET, PROJECT_ROOT
 from etf_screening.yearly_return_screen import (
-    DEFAULT_MIN_DRAWDOWN,
     DEFAULT_MIN_AVERAGE_YEARLY_RETURN,
+    DEFAULT_MIN_DRAWDOWN,
     DEFAULT_MIN_TRADING_DAYS_PER_YEAR,
     DEFAULT_MIN_YEARS,
     build_screen_outputs,

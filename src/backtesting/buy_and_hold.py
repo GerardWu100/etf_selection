@@ -42,7 +42,6 @@ from pathlib import Path
 import matplotlib
 import numpy as np
 import pandas as pd
-
 from data_pipeline.paths import PRICE_PARQUET
 from portfolio_allocation.allocation_utils import RISK_FREE, TRADING_DAYS_PER_YEAR
 

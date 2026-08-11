@@ -4,12 +4,12 @@ Hierarchical Risk Parity (HRP) allocation method.
 
 import numpy as np
 import pandas as pd
-from scipy.cluster.hierarchy import leaves_list, linkage
-from scipy.spatial.distance import squareform
 from correlation_analysis.correlate_utils import (
     correlation_distance_numpy,
     spearman_corr_numpy,
 )
+from scipy.cluster.hierarchy import leaves_list, linkage
+from scipy.spatial.distance import squareform
 
 from .allocation_utils import MAX_WEIGHT, apply_cap
 

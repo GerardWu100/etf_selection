@@ -1,9 +1,8 @@
 """Unit tests for conventional mean-variance portfolio allocation."""
 
 import numpy as np
-import pytest
-
 import portfolio_allocation as methods
+import pytest
 
 
 def _two_asset_moments() -> tuple[np.ndarray, np.ndarray]:
