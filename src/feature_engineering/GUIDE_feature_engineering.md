@@ -190,11 +190,34 @@ primitives used by both features and labels. Repeated "prior regular session"
 fields are derived by one explicit loop, which keeps the shared shift rule easy
 to inspect.
 
+Point-in-time rule:
+`build_session_primitives()` produces the full session-level table, including
+columns that are only knowable once the session is over. `attach_session_primitives()`
+joins that table back onto each minute bar but withholds every column listed in
+`FORWARD_LOOKING_SESSION_COLUMNS`: the whole `regular_*` summary, the `postmarket_*`
+block, and the four `next_regular_*` columns. Without that exclusion a mid-session
+bar would carry its own session's close and the next session's close, and the next
+session's close is the numerator of `target_next_regular_session_return`. Labels read
+those columns from the session-level table instead, in `run_label_registry()`, and
+drop them again before returning.
+
+Anything added to the session-level table must be classified as backward-looking
+(safe to join onto bars) or forward-looking (added to the frozenset).
+
+Shift rule:
+The trading-date convention rolls a bar timestamped 20:00 or later onto the next
+day, so a session date can hold nothing but overnight bars. `shift_over_regular_sessions()`
+shifts across the rows that have regular bars and reindexes back, so such a row
+never acts as its neighbours' previous or next session. Used by the `next_regular_*`
+columns, the `prior_regular_*` columns, and the next-session realized-volatility label.
+
 Key items:
 
 - `classify_market_session()`
 - `build_session_primitives()`
 - `attach_session_primitives()`
+- `shift_over_regular_sessions()`
+- `FORWARD_LOOKING_SESSION_COLUMNS`
 
 ### `enrich.py`
 

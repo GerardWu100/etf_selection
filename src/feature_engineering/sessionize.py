@@ -35,6 +35,31 @@ PRIOR_REGULAR_FIELDS = [
     "return",
 ]
 
+# Session-level columns that are NOT knowable while the regular session is still
+# running. `regular_close` and friends summarise the whole session, `postmarket_*`
+# happens after it, and `next_regular_*` belongs to the following day. Joining any
+# of them onto an intraday bar would put the answer in the predictor set, so
+# `attach_session_primitives` withholds them. Labels read them straight from the
+# session-level table instead.
+FORWARD_LOOKING_SESSION_COLUMNS = frozenset(
+    {
+        "asof_timestamp",
+        "regular_close",
+        "regular_high",
+        "regular_low",
+        "regular_volume",
+        "regular_trades_count",
+        "regular_bar_count",
+        "regular_end_timestamp",
+        "regular_return",
+        "next_regular_close",
+        "next_regular_close_timestamp",
+        "next_regular_open",
+        "next_regular_volume",
+    }
+    | {f"postmarket_{value_column}" for value_column in SESSION_VALUE_COLUMNS}
+)
+
 
 def classify_market_session(timestamp: pd.Series) -> tuple[pd.Series, pd.Series]:
     """
@@ -63,7 +88,13 @@ def classify_market_session(timestamp: pd.Series) -> tuple[pd.Series, pd.Series]
     session_date = naive_timestamp.dt.normalize()
     next_day_mask = clock_minutes >= POSTMARKET_END_MINUTE
     session_date = session_date + pd.to_timedelta(next_day_mask.astype(int), unit="D")
-    return pd.Series(session_date), pd.Series(session_name)
+    # `np.select` returns a bare array, so the session-name Series must be given
+    # the caller's index explicitly. Without it the two returned Series carry
+    # different indexes and the caller's assignment silently produces all-NaN.
+    return (
+        pd.Series(session_date, index=timestamp.index),
+        pd.Series(session_name, index=timestamp.index),
+    )
 
 
 def _aggregate_one_session(
@@ -101,19 +132,41 @@ def _aggregate_one_session(
     return aggregated.rename(columns=rename_map)
 
 
+def shift_over_regular_sessions(
+    session_primitives: pd.DataFrame,
+    source_column: str,
+    periods: int,
+) -> pd.Series:
+    """
+    Shift one column by whole regular sessions, skipping rows that have none.
+
+    The trading-date roll can create a `session_date` that holds only late
+    postmarket bars, for example a Friday 20:00 bar landing on Saturday. Shifting
+    over every row would let such a row act as the previous or next regular
+    session for its neighbours, wiping out the real value. Shifting over the
+    regular-session rows only and reindexing back keeps the neighbours correct.
+    """
+    has_regular = session_primitives["regular_bar_count"].fillna(0) > 0
+    regular_rows = session_primitives.loc[has_regular]
+    shifted = regular_rows.groupby("symbol")[source_column].shift(periods)
+    return shifted.reindex(session_primitives.index)
+
+
 def _attach_forward_session_targets(session_primitives: pd.DataFrame) -> pd.DataFrame:
     """Attach next-session close and realized-volatility targets at the session level."""
     enriched = session_primitives.sort_values(["symbol", "session_date"]).copy()
-    enriched["next_regular_close"] = enriched.groupby("symbol")["regular_close"].shift(
-        -1
-    )
-    enriched["next_regular_close_timestamp"] = enriched.groupby("symbol")[
-        "regular_end_timestamp"
-    ].shift(-1)
-    enriched["next_regular_open"] = enriched.groupby("symbol")["regular_open"].shift(-1)
-    enriched["next_regular_volume"] = enriched.groupby("symbol")[
-        "regular_volume"
-    ].shift(-1)
+    forward_source_columns = {
+        "next_regular_close": "regular_close",
+        "next_regular_close_timestamp": "regular_end_timestamp",
+        "next_regular_open": "regular_open",
+        "next_regular_volume": "regular_volume",
+    }
+    for target_column, source_column in forward_source_columns.items():
+        enriched[target_column] = shift_over_regular_sessions(
+            enriched,
+            source_column,
+            periods=-1,
+        )
     return enriched
 
 
@@ -131,14 +184,17 @@ def _ensure_session_columns(session_primitives: pd.DataFrame) -> pd.DataFrame:
 def _attach_prior_regular_fields(session_primitives: pd.DataFrame) -> pd.DataFrame:
     """Shift prior regular-session fields through one explicit loop."""
     enriched = session_primitives.copy()
-    grouped = enriched.groupby("symbol")
 
     # These columns all use the same previous-regular-session rule, so a short
     # loop is easier to scan than repeating six near-identical assignments.
     for field_name in PRIOR_REGULAR_FIELDS:
         current_column = f"regular_{field_name}"
         prior_column = f"prior_regular_{field_name}"
-        enriched[prior_column] = grouped[current_column].shift(1)
+        enriched[prior_column] = shift_over_regular_sessions(
+            enriched,
+            current_column,
+            periods=1,
+        )
     return enriched
 
 
@@ -211,11 +267,11 @@ def attach_session_primitives(
     classified_bars: pd.DataFrame,
     session_primitives: pd.DataFrame,
 ) -> pd.DataFrame:
-    """Join session-level primitives back onto each classified bar."""
+    """Join the point-in-time-safe session primitives back onto each classified bar."""
     join_columns = [
         column
         for column in session_primitives.columns
-        if column not in {"asof_timestamp"}
+        if column not in FORWARD_LOOKING_SESSION_COLUMNS
     ]
     enriched = classified_bars.merge(
         session_primitives[join_columns],

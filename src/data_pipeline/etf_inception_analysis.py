@@ -14,7 +14,7 @@ Outputs:
     - etf_inception_cumulative.png: line chart of cumulative universe size
 
 Run:
-    uv run python data_pipeline/etf_inception_analysis.py
+    uv run python -m data_pipeline.etf_inception_analysis
 """
 
 from __future__ import annotations
@@ -27,10 +27,15 @@ import pandas as pd
 
 matplotlib.use("Agg")
 
+from correlation_analysis.correlate_utils import HISTORY_START
 from data_pipeline.paths import DATA_PIPELINE_OUTPUT_DIR, SCREEN_CSV
 
 OUTPUT_DIR = DATA_PIPELINE_OUTPUT_DIR
 OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
+
+# Report the cutoff the selection stage actually enforces rather than a fixed
+# date, so this diagnostic stays in step with `HISTORY_START`.
+START_DATE_CUTOFF = pd.Timestamp(HISTORY_START)
 
 
 # ---------------------------------------------------------------------------
@@ -251,11 +256,12 @@ def main() -> None:
     )
     print(f"\nTotal ETFs: {summary['count'].sum()}")
 
-    # -- How many would survive the 2016 cutoff? --
-    pre_2016 = df[df["start_date"] <= pd.Timestamp("2016-01-01")]
-    post_2016 = df[df["start_date"] > pd.Timestamp("2016-01-01")]
-    print(f"\nStart date <= 2016-01-01 (survive cutoff): {len(pre_2016)}")
-    print(f"Start date >  2016-01-01 (filtered out)   : {len(post_2016)}")
+    # -- How many would survive the selection-stage start-date cutoff? --
+    cutoff_label = START_DATE_CUTOFF.strftime("%Y-%m-%d")
+    survivors = df[df["start_date"] <= START_DATE_CUTOFF]
+    filtered_out = df[df["start_date"] > START_DATE_CUTOFF]
+    print(f"\nStart date <= {cutoff_label} (survive cutoff): {len(survivors)}")
+    print(f"Start date >  {cutoff_label} (filtered out)   : {len(filtered_out)}")
 
     # -- Top tickers per year --
     by_year = list_etfs_by_year(df)

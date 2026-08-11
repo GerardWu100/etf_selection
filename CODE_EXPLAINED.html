@@ -1,0 +1,1610 @@
+<!DOCTYPE html>
+<html lang="en-CA">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>etf_selection - code explained</title>
+<script>
+  window.MathJax = { tex: { inlineMath: [['$','$'],['\\(','\\)']], displayMath: [['$$','$$'],['\\[','\\]']] } };
+</script>
+<script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js" async></script>
+<script type="module">
+  // the map diagram at the top of the page; theme follows the page palette
+  import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs";
+  const isLight = document.documentElement.getAttribute("data-theme") === "light";
+  mermaid.initialize({ startOnLoad: true, theme: isLight ? "neutral" : "dark",
+                       flowchart: { curve: "basis", useMaxWidth: true } });
+</script>
+<style>
+  :root{
+    /* dark is the default palette; a light override follows below */
+    --paper:#12161b; --bg:#12161b; --panel:#1b2027; --card:#1a1f26; --surface:#1a1f26; --raise:#1e242c;
+    --ink:#e9eef4; --soft:#b3bec9; --muted:#b3bec9; --faint:#828d99;
+    --line:#2c343e; --line2:#232a33;
+    --green:#6fc796; --greenbg:#14241c; --greenline:#2f4d3a;
+    --amber:#e0b365; --amberbg:#262010; --amberline:#4d3f20;
+    --blue:#87b8ee; --bluebg:#141e2b; --blueline:#2d425c;
+    --red:#e89296; --redbg:#26161a; --redline:#4f2f35;
+    --slate:#a7b1be; --slatebg:#1c2027; --slateline:#353c46;
+    --accent:#4fb9c2; --accent-ink:#6fd0d8; --accent-bg:#10262a;
+    --def:#87b8ee; --def-bg:#141e2b; --def-bd:#2d425c;
+    --why:#6fc796; --why-bg:#14241c; --why-bd:#2f4d3a;
+    --warn:#e0b365; --warn-bg:#262010; --warn-bd:#4d3f20;
+    --flag:#e89296; --flag-bg:#26161a; --flag-bd:#4f2f35;
+    --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    --mono:ui-monospace,"SF Mono","Cascadia Code",Menlo,Consolas,monospace;
+  }
+  :root[data-theme="light"]{
+    --paper:#faf8f4; --bg:#faf8f4; --panel:#f1ede6; --card:#ffffff; --surface:#ffffff; --raise:#fbfaf7;
+    --ink:#1b1b1b; --soft:#4a453e; --muted:#4a453e; --faint:#777067;
+    --line:#d6d0c6; --line2:#e7e2da;
+    --green:#2f6b4c; --greenbg:#e7f1ea; --greenline:#bcdac9;
+    --amber:#8f6413; --amberbg:#f6efdd; --amberline:#e3d3a8;
+    --blue:#2c5f95; --bluebg:#e7eef7; --blueline:#c3d6ea;
+    --red:#943232; --redbg:#f6eaea; --redline:#e2c4c4;
+    --slate:#525a66; --slatebg:#eceef1; --slateline:#cdd2d9;
+    --accent:#0e7c86; --accent-ink:#0b5f67; --accent-bg:#e7f4f4;
+    --def:#2c5f95; --def-bg:#e7eef7; --def-bd:#c3d6ea;
+    --why:#2f6b4c; --why-bg:#e7f1ea; --why-bd:#bcdac9;
+    --warn:#8f6413; --warn-bg:#f6efdd; --warn-bd:#e3d3a8;
+    --flag:#943232; --flag-bg:#f6eaea; --flag-bd:#e2c4c4;
+  }
+
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth;font-size:16px}
+  @media (prefers-reduced-motion:reduce){html{scroll-behavior:auto}}
+  body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--sans);
+    font-size:18px;line-height:1.58;-webkit-font-smoothing:antialiased;
+    text-rendering:optimizeLegibility}
+  .wrap{padding:2.2em clamp(1em,4vw,3.2em) 5em}
+
+  h1{font-size:clamp(2.1rem,5vw,2.7rem);line-height:1.12;letter-spacing:-.02em;font-weight:800;
+    text-wrap:balance;margin:.2em 0 .2em}
+  h2{font-size:1.5rem;font-weight:750;letter-spacing:-.01em;text-wrap:balance;
+    margin:2.4em 0 .5em;padding-top:.7em;border-top:2px solid var(--line)}
+  h3{font-size:1.26rem;font-weight:700;margin:1.7em 0 .4em;color:var(--ink)}
+  h3 code{font-size:.92em}
+  h4{font-size:1rem;margin:1.3em 0 .3em;text-transform:uppercase;letter-spacing:.05em;color:var(--faint)}
+  p{margin:.7em 0}
+  ul,ol{margin:.55em 0;padding-left:1.3em}
+  li{margin:.3em 0}
+  strong,b{color:var(--ink)}
+  a{color:var(--accent-ink);text-underline-offset:2px}
+  a:hover{color:var(--accent)}
+  hr{border:none;border-top:1px solid var(--line);margin:2.5em 0}
+  :focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+
+  code{font-family:var(--mono);font-size:.9em;background:var(--panel);color:var(--ink);
+    padding:.1em .4em;border-radius:4px}
+  pre{background:var(--raise);border:1px solid var(--line);border-radius:10px;padding:1em 1.15em;
+    overflow-x:auto;font-size:.94rem;line-height:1.62;margin:1.1em 0;color:var(--ink);
+    font-family:var(--mono)}
+  pre code{background:none;padding:0;font-size:1em}
+  pre .c{color:var(--faint);font-style:italic}
+
+  .lede{font-size:1.12rem;line-height:1.48;color:var(--soft)}
+  .eyebrow{font-family:var(--mono);font-size:.78rem;letter-spacing:.16em;text-transform:uppercase;
+    color:var(--accent-ink);margin:0 0 1.1em;display:flex;gap:.6em;align-items:center;flex-wrap:wrap}
+  .eyebrow .dot{width:6px;height:6px;border-radius:50%;background:var(--accent)}
+  .sec-no{font-family:var(--mono);font-size:.85rem;color:var(--accent-ink);
+    letter-spacing:.1em;display:block;margin-bottom:.15em}
+  .tag{display:inline-block;font-size:.78rem;text-transform:uppercase;letter-spacing:.08em;
+    background:var(--greenbg);color:var(--green);border:1px solid var(--greenline);
+    padding:.25em .75em;border-radius:20px;margin-bottom:1em}
+  .big{font-size:1.42rem;font-weight:700;color:var(--green)}
+  .pill{font-variant-numeric:tabular-nums;font-weight:600}
+  .fnote{font-size:.95rem;color:var(--soft)}
+  .reads{margin:.55em 0}
+  .reads b{color:var(--soft)}
+  .foot{margin-top:3em;padding-top:1.2em;border-top:1px solid var(--line);
+    color:var(--soft);font-size:.95rem}
+
+  .box{border:1px solid var(--line);border-left-width:4px;border-radius:10px;
+    padding:1em 1.2em;margin:1.3em 0;background:var(--card)}
+  .box>:first-child{margin-top:0}.box>:last-child{margin-bottom:0}
+  .box p:first-child{margin-top:0}.box p:last-child{margin-bottom:0}
+  .box .k{font-weight:700;font-size:.82rem;text-transform:uppercase;letter-spacing:.08em;
+    display:block;margin-bottom:.45em}
+  .def{border-left-color:var(--def);background:var(--def-bg)}.def .k{color:var(--def)}
+  .gist{border-left-color:var(--accent);background:var(--accent-bg)}.gist .k{color:var(--accent-ink)}
+  .why{border-left-color:var(--why);background:var(--why-bg)}.why .k{color:var(--why)}
+  .warn{border-left-color:var(--warn);background:var(--warn-bg)}.warn .k{color:var(--warn)}
+  .flag{border-left-color:var(--flag);background:var(--flag-bg)}.flag .k{color:var(--flag)}
+  .data{border-left-color:var(--slate);background:var(--slatebg)}.data .k{color:var(--slate)}
+  .io{display:grid;grid-template-columns:1fr 1fr;gap:.9em}
+  .io.stack{grid-template-columns:1fr}
+  @media (max-width:820px){.io{grid-template-columns:1fr}}
+  .io .lab{font-family:var(--mono);font-size:.74rem;letter-spacing:.1em;text-transform:uppercase;
+    color:var(--faint);font-weight:700}
+  .io pre{margin:.25em 0 0;font-size:.8rem;line-height:1.5}
+  .data>p{font-size:.95rem}
+
+  .toc{background:var(--panel);border:1px solid var(--line);border-radius:12px;
+    padding:1.1em 1.4em;margin:1.8em 0}
+  .toc .rk{font-family:var(--mono);font-size:.76rem;letter-spacing:.14em;text-transform:uppercase;
+    color:var(--faint);margin-bottom:.5em}
+  .toc ol{margin:.35em 0 0;padding-left:1.4em}
+  .toc a{text-decoration:none;color:var(--ink)}
+  .toc a:hover{color:var(--accent-ink)}
+
+  .scroll{overflow-x:auto;margin:1.2em 0}
+  table{border-collapse:collapse;width:100%;margin:1.2em 0;font-size:1rem;background:var(--card);
+    font-variant-numeric:tabular-nums}
+  .scroll table{margin:0}
+  th,td{border:1px solid var(--line);padding:.55em .75em;text-align:left;vertical-align:top}
+  th,thead th{background:var(--panel);color:var(--ink);font-weight:700}
+  td.n,th.n{text-align:right}
+  .pass{color:var(--green);font-weight:700}
+  .failw{color:var(--red);font-weight:700}
+
+  .chip{display:inline-block;font-size:.74rem;font-weight:700;text-transform:uppercase;
+    letter-spacing:.06em;padding:.15em .55em;border-radius:4px;white-space:nowrap;border:1px solid}
+  .c-veto{background:var(--redbg);color:var(--red);border-color:var(--redline)}
+  .c-drop{background:var(--amberbg);color:var(--amber);border-color:var(--amberline)}
+  .c-never{background:var(--slatebg);color:var(--slate);border-color:var(--slateline)}
+  .c-bug{background:var(--bluebg);color:var(--blue);border-color:var(--blueline)}
+  .legend{display:flex;flex-wrap:wrap;gap:.5em 1.1em;margin:1em 0 0;font-size:.92rem;color:var(--soft)}
+  .legend span.chip{margin-right:.4em}
+
+  figure{margin:1.6em 0;text-align:center}
+  figure img{max-width:100%;height:auto;border:1px solid var(--line);border-radius:8px;
+    background:#fff;padding:6px}
+  :root:not([data-theme="light"]) figure img{filter:brightness(.94) contrast(1.02)}
+  figcaption{font-size:.92rem;color:var(--soft);margin-top:.6em;
+    margin-left:auto;margin-right:auto}
+
+  /* the map diagram sits on its own plate and scrolls sideways rather than the page */
+  .mermaid{background:var(--card);border:1px solid var(--line);border-radius:12px;
+    padding:1.2em;margin:1.4em 0;overflow-x:auto;text-align:center;
+    font-family:var(--sans)}
+  .mermaid svg{max-width:100%;height:auto}
+
+  /* rendered maths inherits the page colour instead of MathJax's own default */
+  mjx-container,.katex{color:inherit}
+  mjx-container[display="true"],.katex-display{overflow-x:auto;overflow-y:hidden;padding:.15em 0}
+</style>
+</head><body>
+<div class="wrap">
+
+<p class="eyebrow"><span class="dot"></span>etf_selection &middot; structure and behaviour &middot; code walkthrough</p>
+<h1>etf_selection: what the code does and how the pieces fit</h1>
+<p class="lede">A structural tour of the repository: the data flow from raw market bars to a
+recommended ETF basket with weights, the modules that carry each step, the settings that change
+the answer, and the traps worth knowing about.</p>
+
+<div class="box def">
+  <span class="k">How to use this</span>
+  <p>Sections follow the order the data moves, not the order the files sit on disk. Code snippets
+  are copied unedited from the files named in each heading. Every number in a
+  <b>Sample data</b> box came from running this repository's own code on its own data on
+  2026-08-10; nothing is estimated. Coloured boxes flag design choices, traps and weaknesses.</p>
+</div>
+
+<div class="box why">
+  <span class="k">The process in plain English</span>
+  <p>The project answers one question: given every liquid US-listed exchange-traded fund
+  (ETF &mdash; a fund whose shares trade on an exchange like a stock), which thirty of them
+  should you hold, and in what proportions? It first keeps the 500 most heavily traded ETFs,
+  then keeps only those with a full eight years of history and a decent return, then picks a
+  spread-out subset using rank correlations between their daily returns, then runs seven
+  different textbook rules for turning that basket into weights, and finally checks what
+  buying and holding those weights would have been worth.</p>
+</div>
+
+<h2 id="map"><span class="sec-no">00</span>Map</h2>
+
+<div class="mermaid">
+flowchart LR
+  ch[("ClickHouse: firstrate.etfs")] --> dp["data_pipeline"]
+  dp --> csv[("volume_screen.csv")]
+  dp --> pq[("daily close parquet")]
+  csv --> ret["build_return_matrix()"]
+  pq --> ret
+  ret --> filt["apply_shared_selection_filters()"]
+  filt --> dist["compute_distance_matrix()"]
+  dist --> sel["three selectors: greedy, k-medoids, max-DR"]
+  sel --> stats["compute_stats()"]
+  sel --> alloc["seven weighting rules"]
+  alloc --> bt["run_weighted_backtest()"]
+  pq --> scr["yearly_return_screen.py"]
+</div>
+<p class="fnote">Cylinders are stored files or tables; rounded boxes are code. Arrows show which
+way the data moves. <code>yearly_return_screen.py</code> is a separate branch off the same
+parquet file: it does not feed the selection chain. A second research track,
+<code>feature_engineering</code>, reads ClickHouse directly and is not connected to any of this
+&mdash; it is covered in section 12.</p>
+
+<div class="toc">
+  <div class="rk">Contents</div>
+  <ol>
+    <li><a href="#sec1">What the repository is for, and where things live</a></li>
+    <li><a href="#sec2">Shared paths and the settings that change the answer</a></li>
+    <li><a href="#sec3">Stage 1 &mdash; building the universe &mdash; <code>data_pipeline</code></a></li>
+    <li><a href="#sec4">Stage 2 &mdash; prices to a clean return panel &mdash; <code>build_return_matrix</code></a></li>
+    <li><a href="#sec5">Stage 3 &mdash; the survivor filters &mdash; <code>apply_shared_selection_filters</code></a></li>
+    <li><a href="#sec6">Stage 4 &mdash; correlation and distance</a></li>
+    <li><a href="#sec7">Stage 5 &mdash; the three selectors</a></li>
+    <li><a href="#sec8">Stage 6 &mdash; scoring the basket &mdash; <code>compute_stats</code></a></li>
+    <li><a href="#sec9">Stage 7 &mdash; turning a basket into weights &mdash; <code>portfolio_allocation</code></a></li>
+    <li><a href="#sec10">Stage 8 &mdash; the buy-and-hold check &mdash; <code>run_weighted_backtest</code></a></li>
+    <li><a href="#sec11">Side branch &mdash; the drawdown and volatility screen</a></li>
+    <li><a href="#sec12">Separate track &mdash; <code>feature_engineering</code></a></li>
+    <li><a href="#sec13">Notebooks, tests and how to run everything</a></li>
+    <li><a href="#sec14">Call graph</a></li>
+    <li><a href="#sec15">Edge cases</a></li>
+    <li><a href="#sec16">Gotchas and traps</a></li>
+    <li><a href="#sec17">Honest limitations</a></li>
+    <li><a href="#sec18">Fixes applied</a></li>
+  </ol>
+</div>
+
+<h2 id="sec1"><span class="sec-no">01</span>What the repository is for, and where things live</h2>
+
+<p>The repository has one main chain and two side branches. The main chain screens, selects,
+weights and evaluates an ETF basket. The first side branch is a standalone quality screen on the
+same price file. The second side branch, <code>feature_engineering</code>, is an unrelated piece
+of research on minute-level bars.</p>
+
+<div class="scroll">
+<table>
+<thead><tr><th>Folder</th><th>What lives there</th><th>Reads</th><th>Writes</th></tr></thead>
+<tbody>
+<tr><td><code>src/data_pipeline/</code></td><td>Connection helper, SQL helpers, canonical paths, the two extract stages, an inception-year diagnostic</td><td>ClickHouse</td><td><code>data/raw/</code></td></tr>
+<tr><td><code>src/correlation_analysis/</code></td><td>All shared selection logic in <code>correlate_utils.py</code> (1,282 lines) plus one file per selection method</td><td><code>data/raw/</code></td><td><code>outputs/correlation_analysis/</code></td></tr>
+<tr><td><code>src/portfolio_allocation/</code></td><td>Seven weighting rules, one file each, plus a shared solver shell and a weight-bound projection</td><td>A return panel in memory</td><td><code>outputs/portfolio_allocation/</code></td></tr>
+<tr><td><code>src/backtesting/</code></td><td>Fixed-share buy-and-hold valuation</td><td><code>data/raw/</code> parquet</td><td><code>outputs/backtesting/</code></td></tr>
+<tr><td><code>src/etf_screening/</code></td><td>Drawdown plus average-yearly-return screen, ranked by weekly volatility</td><td><code>data/raw/</code> parquet</td><td><code>outputs/etf_return_vol_screen/</code></td></tr>
+<tr><td><code>src/feature_engineering/</code></td><td>Point-in-time intraday feature and label builder with its own <code>config.toml</code></td><td>ClickHouse</td><td><code>outputs/feature_engineering/</code></td></tr>
+<tr><td><code>scripts/</code></td><td>One thin command-line wrapper, <code>scan_etfs_return_vol.py</code></td><td>&mdash;</td><td>&mdash;</td></tr>
+<tr><td><code>notebooks/01_project_walkthrough/</code></td><td>Five notebooks that drive the modules; they hold no algorithm code of their own</td><td>&mdash;</td><td>&mdash;</td></tr>
+</tbody>
+</table>
+</div>
+
+<div class="box warn"><span class="k">Trap</span>
+<p>There is no orchestration entry point. <code>main.py</code> prints
+<code>"Hello from etf-selection!"</code> and nothing else. The selection method files
+(<code>correlate_greedy.py</code>, <code>correlate_maxdiv.py</code>,
+<code>correlate_kmedoids.py</code>) expose functions but have no <code>main()</code> and no
+<code>if __name__ == "__main__"</code> block. The only ways to run the selection chain are the
+notebooks or your own script. The README's "Next useful improvements" list already names this.</p></div>
+
+<h2 id="sec2"><span class="sec-no">02</span>Shared paths and the settings that change the answer</h2>
+
+<h3><code>data_pipeline/paths.py</code> &mdash; one place that knows the folder layout</h3>
+
+<pre>PROJECT_ROOT = Path(__file__).resolve().parents[2]
+RAW_DATA_DIR = PROJECT_ROOT / "data" / "raw"
+SCREEN_CSV = RAW_DATA_DIR / "volume_screen.csv"
+PRICE_PARQUET = RAW_DATA_DIR / "daily_close_volume_screened_2016_2025.parquet"
+CORRELATION_OUTPUT_DIR = PROJECT_ROOT / "outputs" / "correlation_analysis"
+DATA_PIPELINE_OUTPUT_DIR = PROJECT_ROOT / "outputs" / "data_pipeline"
+ENV_PATH = PROJECT_ROOT / ".env"</pre>
+
+<div class="box gist"><span class="k">In plain words</span>
+<p>Every file location is derived from where this one file sits, so nothing breaks when you run
+code from a different folder.</p></div>
+
+<div class="box why"><span class="k">Why it is written this way</span>
+<p><code>parents[2]</code> walks up from <code>src/data_pipeline/paths.py</code> to
+<code>src/data_pipeline</code>, then <code>src</code>, then the repository root. Because every
+other module imports these constants instead of writing its own path, moving the repository
+cannot break the pipeline. Two of the five notebooks do reinvent this and get it wrong &mdash;
+see section 16.</p></div>
+
+<h3>The tuning constants, and what moving each one does</h3>
+
+<p>There is no <code>config.toml</code> for the main chain. Every setting is a module-level
+constant. These are the ones that change the answer.</p>
+
+<div class="scroll">
+<table>
+<thead><tr><th>Constant</th><th>File</th><th class="n">Value</th><th>What changing it does</th></tr></thead>
+<tbody>
+<tr><td><code>TOP_N</code></td><td><code>data_pipeline/screen.py</code></td><td class="n">500</td><td>How many ETFs survive the liquidity screen and end up in the parquet.</td></tr>
+<tr><td><code>SCREEN_YEARS</code></td><td><code>data_pipeline/screen.py</code></td><td class="n">2020&ndash;2025</td><td>Which calendar years count toward "combined volume". A shorter window favours recently launched funds.</td></tr>
+<tr><td><code>HISTORY_END</code></td><td><code>correlate_utils.py</code></td><td class="n">2025-12-31</td><td>Last day of the study window, inclusive.</td></tr>
+<tr><td><code>HISTORY_YEARS</code></td><td><code>correlate_utils.py</code></td><td class="n">8</td><td>Length of the study window. <code>HISTORY_START</code> is derived: <code>2025 - 8 + 1 = 2018-01-01</code>. Raising it demands longer track records and shrinks the universe.</td></tr>
+<tr><td><code>MIN_COVERAGE</code></td><td><code>correlate_utils.py</code></td><td class="n">0.80</td><td>An ETF must have a price on at least 80&nbsp;% of the sampled dates or it is dropped.</td></tr>
+<tr><td><code>N_SELECT</code></td><td><code>correlate_utils.py</code></td><td class="n">30</td><td>Basket size every selector aims for.</td></tr>
+<tr><td><code>ANCHOR_TICKERS</code></td><td><code>correlate_utils.py</code></td><td class="n">("VOO","VEA")</td><td>Names forced into every basket, in first position. If one fails a filter the run raises rather than quietly dropping it.</td></tr>
+<tr><td><code>MIN_SELECTION_TOTAL_RETURN</code></td><td><code>correlate_utils.py</code></td><td class="n">0.1823</td><td>Minimum cumulative log return over the whole window. 0.1823 is $\ln(1.20)$, so it means "+20&nbsp;% over eight years".</td></tr>
+<tr><td><code>MIN_ANN_VOL</code> / <code>MAX_ANN_VOL</code></td><td><code>correlate_utils.py</code></td><td class="n">0.10 / 0.60</td><td>Annualised volatility band. The floor removes cash-like funds; the ceiling removes leveraged and inverse products.</td></tr>
+<tr><td><code>RISK_FREE</code></td><td><code>correlate_utils.py</code></td><td class="n">0.05</td><td>Annual risk-free rate subtracted in every Sharpe ratio, everywhere in the repository.</td></tr>
+<tr><td><code>DEFAULT_RETURN_FREQUENCY</code></td><td><code>correlate_utils.py</code></td><td class="n">"daily"</td><td>Switching to <code>"weekly"</code> resamples prices to Friday closes and changes the annualisation factor from 252 to 52 &mdash; but only inside <code>correlation_analysis</code>. See the trap below.</td></tr>
+<tr><td><code>MIN_WEIGHT</code> / <code>MAX_WEIGHT</code></td><td><code>allocation_utils.py</code></td><td class="n">0.05 / 0.20</td><td>Per-holding weight floor and cap used by every allocation rule.</td></tr>
+<tr><td><code>TRADING_DAYS_PER_YEAR</code></td><td><code>allocation_utils.py</code></td><td class="n">252</td><td>Annualisation factor inside the allocation and backtest code. Hard-wired, not linked to <code>DEFAULT_RETURN_FREQUENCY</code>.</td></tr>
+<tr><td><code>DEFAULT_MIN_DRAWDOWN</code></td><td><code>yearly_return_screen.py</code></td><td class="n">-0.15</td><td>Deepest weekly peak-to-trough loss the standalone screen tolerates.</td></tr>
+<tr><td><code>DEFAULT_MIN_AVERAGE_YEARLY_RETURN</code></td><td><code>yearly_return_screen.py</code></td><td class="n">0.03</td><td>Average simple calendar-year return hurdle for the standalone screen.</td></tr>
+<tr><td><code>DEFAULT_MIN_YEARS</code></td><td><code>yearly_return_screen.py</code></td><td class="n">5</td><td>Usable calendar years required before an ETF can be ranked.</td></tr>
+</tbody>
+</table>
+</div>
+
+<div class="box warn"><span class="k">Trap</span>
+<p><code>DEFAULT_RETURN_FREQUENCY</code> does not reach the allocation code.
+<code>correlation_analysis</code> annualises with 252 or 52 depending on the frequency you pass,
+but <code>mean_variance</code>, <code>max_sharpe</code> and <code>run_weighted_backtest</code>
+multiply by <code>TRADING_DAYS_PER_YEAR = 252</code> unconditionally. Feed a weekly return panel
+into <code>max_sharpe</code> and the annualised return is roughly 4.8 times too large. The
+notebooks happen to use daily returns for allocation, so this is latent, not currently wrong.</p></div>
+
+<h2 id="sec3"><span class="sec-no">03</span>Stage 1 &mdash; building the universe &mdash; <code>data_pipeline</code></h2>
+
+<h3><code>clickhouse_client.build_client()</code> &mdash; one connection, built from <code>.env</code></h3>
+
+<pre>def build_client() -&gt; clickhouse_connect.driver.Client:
+    <span class="c"># Load credentials once per call so scripts and notebooks behave the same</span>
+    <span class="c"># whether or not the caller already imported another pipeline module.</span>
+    load_dotenv(ENV_PATH)
+
+    host = os.environ["CLICKHOUSE_HOST"]
+    port = int(os.environ["CLICKHOUSE_PORT"])
+    user = os.environ["CLICKHOUSE_USER"]
+    password = os.environ["CLICKHOUSE_PASSWORD"]
+    secure = os.environ.get("CLICKHOUSE_SECURE", "false").lower() == "true"
+    verify = os.environ.get("CLICKHOUSE_VERIFY", "false").lower() == "true"</pre>
+
+<div class="box def"><span class="k">What it does</span>
+<p><b>Input:</b> the six <code>CLICKHOUSE_*</code> variables in <code>.env</code>.
+<b>Output:</b> a connected HTTP client. <b>Role:</b> the single door to the database; both
+extract stages and the selection stage call it.</p></div>
+
+<div class="box warn"><span class="k">Trap</span>
+<p><code>os.environ["CLICKHOUSE_HOST"]</code> raises <code>KeyError</code> when the variable is
+missing, and <code>get_client</code> connects eagerly, so a dead server raises here rather than
+on the first query. Callers must handle both. <code>load_daily_closes</code> now does &mdash;
+see section 18.</p></div>
+
+<h3><code>screen.py</code> &mdash; rank every ETF by six-year traded volume</h3>
+
+<pre>query = f"""
+    SELECT
+        symbol,
+        toYear(ts)      AS year,
+        sum(volume)     AS total_vol
+    FROM firstrate.etfs
+    WHERE toYear(ts) IN ({years_sql})
+    GROUP BY symbol, year
+    ORDER BY symbol, year
+"""</pre>
+
+<div class="box gist"><span class="k">In plain words</span>
+<p>Add up how many shares of each ETF changed hands in each year from 2020 to 2025, keep the
+500 busiest, and record when each one first appeared in the database.</p></div>
+
+<div class="box def"><span class="k">What it does</span>
+<p><b>Input:</b> minute bars in <code>firstrate.etfs</code>. <b>Output:</b>
+<code>data/raw/volume_screen.csv</code>, 500 rows by 9 columns. <b>Role:</b> defines the
+candidate universe for everything downstream.</p></div>
+
+<div class="box data"><span class="k">Sample data</span>
+<div class="io stack">
+<div><span class="lab">out &mdash; data/raw/volume_screen.csv, first three rows</span>
+<pre>ticker      vol_2020      vol_2021      vol_2022      vol_2023      vol_2024      vol_2025  vol_combined  start_date
+TQQQ    7.103671e+10  3.381874e+10  8.501228e+10  6.203474e+10  2.784458e+10  3.364312e+10  3.133902e+11  2010-02-11
+SPY     2.699301e+10  1.537053e+10  1.883205e+10  1.624966e+10  1.052750e+10  1.310804e+10  1.010808e+11  2000-01-03
+SOXL    4.864822e+09  3.347483e+09  1.802757e+10  1.702194e+10  1.754132e+10  2.855812e+10  8.936126e+10  2010-03-11</pre></div>
+</div>
+<p>500 rows in total. Note that the busiest ETF in the file is TQQQ, a three-times-leveraged
+Nasdaq fund &mdash; volume alone is not a quality signal, which is exactly why the later
+volatility ceiling exists.</p></div>
+
+<div class="box why"><span class="k">Why volume and not assets under management</span>
+<p>The source table holds traded bars, not fund accounting data, so traded volume is the only
+liquidity measure available. It answers the question that actually matters for execution:
+can you buy and sell this without moving the price?</p></div>
+
+<h3><code>export_daily_data.py</code> &mdash; collapse minute bars to one row per ETF per day</h3>
+
+<pre>return f"""
+    SELECT
+        symbol              AS ticker,
+        toDate(ts)          AS date,
+        argMax(close, ts)   AS close_price,
+        sum(volume)         AS volume
+    FROM firstrate.etfs
+    WHERE symbol IN ({symbols_sql})
+      AND ts &gt;= '{start_date}'
+      AND ts &lt;  '{history_end_exclusive}'
+    GROUP BY ticker, date
+    ORDER BY ticker, date
+"""</pre>
+
+<div class="box def"><span class="k">What it does</span>
+<p><b>Input:</b> the 500 tickers from stage 1. <b>Output:</b>
+<code>data/raw/daily_close_volume_screened_2016_2025.parquet</code>, 1,081,660 rows and four
+columns, 500 tickers, 2016-01-04 to 2025-12-31, 11.22&nbsp;MB on disk. <b>Role:</b> the shared
+offline data file; four of the six code areas read it and nothing else.</p></div>
+
+<div class="box why"><span class="k">Why <code>argMax(close, ts)</code> and not "the 16:00 bar"</span>
+<p><code>argMax(close, ts)</code> means "the <code>close</code> value belonging to the row with
+the largest <code>ts</code>". Minute bars only exist when a trade happened, so an illiquid ETF may
+have no bar in the final minute of the session. Asking for the last bar that exists gives the
+true last traded price of the day; asking for a fixed timestamp would return nothing on those
+days.</p></div>
+
+<div class="box warn"><span class="k">Trap</span>
+<p><code>exclusive_end_date()</code> turns an inclusive date such as <code>2025-12-31</code> into
+the exclusive bound <code>2026-01-01</code>. Without it, <code>ts &lt;= '2025-12-31'</code> would
+be read as <code>ts &lt;= '2025-12-31 00:00:00'</code> and silently drop the whole last trading
+day. Timestamps compared against bare dates are a classic off-by-one-day bug.</p></div>
+
+<div class="box why"><span class="k">Why the file is validated after writing</span>
+<p><code>_validate_parquet_magic()</code> reads the first four bytes and the last four bytes and
+insists both are <code>PAR1</code>. Parquet files begin and end with that marker, so a truncated
+download fails loudly at export time rather than three stages later as a confusing pandas
+error.</p></div>
+
+<h2 id="sec4"><span class="sec-no">04</span>Stage 2 &mdash; prices to a clean return panel</h2>
+
+<h3><code>load_candidates()</code> and <code>apply_start_date_filter()</code></h3>
+
+<pre>cutoff = pd.to_datetime(normalized_start).date()
+before = len(df)
+df = df[df["start_date"] &lt;= cutoff].copy()
+after = len(df)</pre>
+
+<div class="box gist"><span class="k">In plain words</span>
+<p>Throw away any ETF that did not already exist on the first day of the study window, so every
+survivor has a complete history to compare.</p></div>
+
+<div class="box data"><span class="k">Sample data</span>
+<div class="io">
+<div><span class="lab">in &mdash; volume_screen.csv</span>
+<pre>500 tickers
+start_date ranges from
+2000-01-03 to 2025-02-20</pre></div>
+<div><span class="lab">out &mdash; console</span>
+<pre>Candidates after start_date filter
+(&lt;= 2018-01-01): 395 / 500
+(dropped 105)   &lt;- newer funds go</pre></div>
+</div>
+<p>105 of the 500 busiest ETFs are younger than the eight-year window. Funds such as TSLL (2022)
+and IBIT (2024) are removed here, before any return is computed.</p></div>
+
+<div class="box why"><span class="k">Why the age filter lives in the selection stage, not the extract</span>
+<p>The parquet keeps all 500 tickers so a different study window can be tried without going back
+to the database. Only <code>correlation_analysis</code> decides who is old enough. That keeps the
+expensive step (the database extract) independent of the cheap step (choosing a window).</p></div>
+
+<h3><code>load_daily_closes()</code> &mdash; database first, local file second</h3>
+
+<pre>def load_daily_closes(symbols, start_date=HISTORY_START, end_date=HISTORY_END):
+    <span class="c">"""Load daily closes from ClickHouse when possible, else from local parquet."""</span>
+    try:
+        client = build_client()
+    except (KeyError, FileNotFoundError, ClickHouseError, OSError) as connect_error:
+        print(f"ClickHouse unavailable ({type(connect_error).__name__}: {connect_error}).")
+        return load_daily_closes_from_parquet(symbols, start_date=start_date, end_date=end_date)
+    return fetch_daily_closes(client, symbols, start_date=start_date, end_date=end_date)</pre>
+
+<div class="box def"><span class="k">What it does</span>
+<p><b>Input:</b> a list of tickers and an inclusive date window. <b>Output:</b> a long table with
+columns <code>symbol</code>, <code>date</code>, <code>close_price</code>. <b>Role:</b> makes every
+downstream stage work with or without database access.</p></div>
+
+<div class="box data"><span class="k">Sample data</span>
+<div class="io">
+<div><span class="lab">in &mdash; 395 tickers, 2018-01-01 to 2025-12-31</span>
+<pre>ClickHouse unavailable
+(OperationalError: ... Connection refused).
+Falling back to local parquet</pre>
+<p class="fnote">Abridged: the real driver message names the host,
+port and URL as well.</p></div>
+<div><span class="lab">out &mdash; prices_long</span>
+<pre>symbol       date  close_price
+  AAXJ 2018-01-02      66.1452
+  AAXJ 2018-01-03      66.7227
+  AAXJ 2018-01-04      66.8235</pre></div>
+</div>
+<p>791,912 rows, 395 symbols, 2,012 unique dates. The two paths return the same shape, so no
+caller has to know which one ran.</p></div>
+
+<h3><code>build_return_matrix()</code> &mdash; the panel everything else is built on</h3>
+
+<pre>price_wide = prices_long.pivot(index="date", columns="symbol", values="close_price")
+...
+if normalized_frequency == "weekly":
+    price_wide = price_wide.resample(WEEKLY_PRICE_RULE).last().dropna(how="all")
+...
+coverage = price_wide.notna().sum() / total_periods
+passing = coverage[coverage &gt;= MIN_COVERAGE].index.tolist()
+...
+log_ret = np.log(price_wide / price_wide.shift(1))
+log_ret = log_ret.iloc[1:]
+log_ret = log_ret.dropna(axis=1, how="all")</pre>
+
+<div class="box gist"><span class="k">In plain words</span>
+<p>Turn a long list of prices into a grid with dates down the side and tickers across the top,
+drop any ticker with too many missing days, and convert prices into day-to-day returns.</p></div>
+
+<div class="box def"><span class="k">The formula</span>
+<p>$$r_{i,t}=\ln\!\left(\frac{P_{i,t}}{P_{i,t-1}}\right),\qquad
+\text{coverage}_i=\frac{\#\{t: P_{i,t}\ \text{observed}\}}{T}$$</p>
+<p class="fnote">$P_{i,t}$ is the closing price of ETF $i$ on sampled date $t$; $r_{i,t}$ is its
+log return, meaning the natural logarithm of the price ratio; $T$ is the number of sampled dates
+in the window. A ticker is kept when $\text{coverage}_i \ge 0.80$.</p></div>
+
+<div class="box why"><span class="k">Why log returns rather than percentage changes</span>
+<p>Log returns add up across time: the return over eight years is simply the sum of the daily
+values, with no compounding arithmetic. That single property is used in four separate places
+here &mdash; the total-return hurdle, the average-calendar-year hurdle, the cumulative wealth
+path, and the drawdown calculation. Converting back to a percentage is
+$e^{\sum_t r_t}-1$.</p></div>
+
+<div class="box data"><span class="k">Sample data</span>
+<div class="io">
+<div><span class="lab">in &mdash; VOO closing prices</span>
+<pre>2018-01-02   218.7589
+2018-01-03   220.0603
+2018-01-04   221.0254
+2018-01-05   222.4419</pre></div>
+<div><span class="lab">out &mdash; log_ret["VOO"]</span>
+<pre>2018-01-02        NaN   &lt;- no prior day
+2018-01-03   0.005931   &lt;- ln(220.0603 / 218.7589)
+2018-01-04   0.004376
+2018-01-05   0.006388</pre>
+<p class="fnote">$\ln(220.0603/218.7589)=0.0059313896$, which is exactly what the code
+returns.</p></div>
+</div>
+<p>Price grid before filtering: 2,012 dates by 395 tickers. The coverage filter drops two
+symbols, AMJ and EU. The first row of returns is always empty (there is no previous price) and is
+dropped, leaving a panel of 2,011 rows by 393 columns.</p></div>
+
+<div class="box warn"><span class="k">Trap</span>
+<p>Prices are deliberately <em>not</em> forward-filled before the coverage count. If they were,
+every gap would look like a real observation and the coverage filter would pass everything. The
+comment in the source says exactly this. Gaps become missing returns, which the correlation step
+then handles separately.</p></div>
+
+<h2 id="sec5"><span class="sec-no">05</span>Stage 3 &mdash; the survivor filters</h2>
+
+<h3><code>apply_shared_selection_filters()</code> &mdash; four hurdles in a fixed order</h3>
+
+<p>The filters run in this sequence, and each one re-checks that the anchor tickers survived:</p>
+
+<ol>
+  <li><b>Manual blacklist</b> &mdash; names you name explicitly. Raises if you blacklist an anchor.</li>
+  <li><b>Total-return hurdle</b> &mdash; cumulative log return over the whole window must be at least <code>MIN_SELECTION_TOTAL_RETURN</code>.</li>
+  <li><b>Average calendar-year hurdle</b> &mdash; optional; only applied when the caller passes a number.</li>
+  <li><b>Volatility band</b> &mdash; annualised volatility must lie between <code>MIN_ANN_VOL</code> and <code>MAX_ANN_VOL</code>. Anchors are re-added even if they fail.</li>
+</ol>
+
+<div class="box def"><span class="k">The formula</span>
+<p>$$R_i=\sum_{t=1}^{T} r_{i,t}\;\ge\;\theta,\qquad
+\bar{A}_i=\frac{1}{Y}\sum_{y=1}^{Y}\ \sum_{t\in y} r_{i,t}\;\ge\;\alpha,\qquad
+\sigma_i=\mathrm{sd}(r_{i,\cdot})\sqrt{k}\in[\sigma_{\min},\sigma_{\max}]$$</p>
+<p class="fnote">$R_i$ is ETF $i$'s cumulative log return over the whole window and $\theta$ is
+<code>MIN_SELECTION_TOTAL_RETURN</code> $=0.1823$. $Y$ is the number of calendar years in the
+sample and $\bar{A}_i$ is the average of the yearly log-return sums, compared against the hurdle
+$\alpha$. $\mathrm{sd}$ is the sample standard deviation with one degree of freedom removed,
+$k$ is the number of return periods per year (252 for daily, 52 for weekly), and
+$[\sigma_{\min},\sigma_{\max}]=[0.10,0.60]$.</p></div>
+
+<div class="box data"><span class="k">Sample data</span>
+<div class="io stack">
+<div><span class="lab">out &mdash; console, running the module defaults on the parquet</span>
+<pre>Total-return hurdle dropped 108 symbols below 0.1823 log total return (2018-01-01 to 2025-12-31).
+Top 15 dropped: ['SOXS', 'JDST', 'UVXY', 'TECS', 'BOIL', 'DUST', 'SQQQ', 'LABD', 'GUSH', 'FAZ', ...]
+Minimum volatility hurdle (&lt;10.0%) dropped 43 symbols.
+Top 15 lowest vol dropped: ['SHV', 'USFR', 'JPST', 'MINT', 'ICSH', 'GSY', 'FTSM', 'GBIL', ...]
+Maximum volatility hurdle (&gt;60%) dropped 9 symbols: ['AGQ', 'DFEN', 'FAS', 'GBTC', 'SDS', 'SOXL', 'TECL', 'TQQQ', 'USD']</pre></div>
+</div>
+<p>393 tickers in, 233 out. Worked examples from the same run: VOO has a cumulative log return of
+1.0302, which is $e^{1.0302}-1 = 180.15\,\%$ over eight years, and passes. SQQQ, a
+three-times-inverse Nasdaq fund, scores $-6.2271$ and is removed. Annualised volatility is
+0.1971 for VOO, 0.0052 for the cash-like SHV (below the floor, removed) and 0.7253 for TQQQ
+(above the ceiling, removed).</p></div>
+
+<div class="box why"><span class="k">Why a volatility band and not a name blacklist</span>
+<p>Leveraged and inverse ETFs do not identify themselves in the data. A ceiling of 60&nbsp;%
+annualised volatility catches them mechanically, and a floor of 10&nbsp;% removes money-market
+substitutes whose returns would otherwise look like free Sharpe ratio. The band replaces a list
+that would go stale every time a new product launches.</p></div>
+
+<div class="box flag"><span class="k">The weakness, stated honestly</span>
+<p>The total-return hurdle keeps only ETFs that went up over exactly the window that is later used
+to score and backtest them. This is in-sample selection: nothing here could have been known on
+2018-01-01. It is the largest single reason the backtest numbers in section 10 should not be read
+as an expectation of future performance.</p></div>
+
+<h2 id="sec6"><span class="sec-no">06</span>Stage 4 &mdash; correlation and distance</h2>
+
+<h3><code>compute_spearman_corr()</code></h3>
+
+<pre>filled = log_ret.fillna(log_ret.median())
+corr_array = spearman_corr_numpy(filled.values)</pre>
+
+<div class="box def"><span class="k">What it does</span>
+<p><b>Input:</b> the 2,011 by 233 return panel. <b>Output:</b> a 233 by 233 symmetric matrix of
+Spearman rank correlations. <b>Role:</b> the raw material for every selector and for HRP.</p></div>
+
+<div class="box why"><span class="k">Why rank correlation rather than ordinary correlation</span>
+<p>Spearman correlation is Pearson correlation applied to the <em>ranks</em> of the observations
+rather than the values. Daily ETF returns have fat tails: one crash day can dominate an ordinary
+correlation between two funds that are otherwise unrelated. Ranking caps the influence of any
+single day at one rank position, and it also picks up relationships that are consistent but not
+straight-line.</p></div>
+
+<h3><code>compute_distance_matrix()</code> &mdash; the signed distance</h3>
+
+<div class="box def"><span class="k">The formula</span>
+<p>$$D_{ij}=\sqrt{\tfrac{1}{2}\left(1-r_{ij}\right)}$$</p>
+<p class="fnote">$r_{ij}$ is the Spearman correlation between ETFs $i$ and $j$; $D_{ij}$ is the
+distance between them. The identity behind it: if $a$ and $b$ are unit-length vectors with
+$a\cdot b=r$, then $\|a-b\|^{2}=a\cdot a-2a\cdot b+b\cdot b=2(1-r)$, so
+$\|a-b\|=\sqrt{2(1-r)}$ and dividing by $\sqrt{2}$ scales the result onto $[0,1]$.</p></div>
+
+<div class="box data"><span class="k">Sample data</span>
+<div class="io">
+<div><span class="lab">in &mdash; Spearman correlations</span>
+<pre>        VOO     VEA     GLD     IAU
+VOO  1.0000  0.7236  0.0584  0.0710
+VEA  0.7236  1.0000  0.1851  0.1976
+GLD  0.0584  0.1851  1.0000  0.9627
+IAU  0.0710  0.1976  0.9627  1.0000</pre></div>
+<div><span class="lab">out &mdash; distances</span>
+<pre>        VOO     VEA     GLD     IAU
+VOO  0.0000  0.3717  0.6862  0.6815
+VEA  0.3717  0.0000  0.6383  0.6334
+GLD  0.6862  0.6383  0.0000  0.1366   &lt;- two gold funds, almost the same asset
+IAU  0.6815  0.6334  0.1366  0.0000</pre></div>
+</div>
+<p>Check one cell by hand: $\sqrt{0.5\,(1-0.9627)}=\sqrt{0.01865}=0.1366$, matching the GLD-IAU
+entry. Three reference points: $r=+1 \Rightarrow D=0$, $r=0 \Rightarrow D=0.707$,
+$r=-1 \Rightarrow D=1$.</p></div>
+
+<div class="box why"><span class="k">Why signed and not absolute distance</span>
+<p>The obvious alternative, $D = 1-|r|$, would place a bond fund with $r=-0.8$ against equities at
+distance 0.2 &mdash; treating it as nearly the same asset. That is backwards. A negatively
+correlated holding is the most useful diversifier there is, and the signed formula puts it at the
+far end of the space where it belongs.</p></div>
+
+<h2 id="sec7"><span class="sec-no">07</span>Stage 5 &mdash; the three selectors</h2>
+
+<p>All three take the same 233-name survivor universe, force VOO and VEA into the first two
+slots, and return 30 tickers. They differ in what "diverse" means.</p>
+
+<div class="scroll">
+<table>
+<thead><tr><th>Method</th><th>File</th><th>What it maximises</th><th>Cost</th></tr></thead>
+<tbody>
+<tr><td>Greedy maximin</td><td><code>correlate_greedy.py</code></td><td>The distance from each new pick to its nearest existing holding</td><td>Pairwise geometry only; ignores how the whole basket behaves</td></tr>
+<tr><td>Max diversification ratio</td><td><code>correlate_maxdiv.py</code></td><td>The whole basket's equal-weight diversification ratio</td><td>Slower; re-scores every candidate at every step</td></tr>
+<tr><td>Anchored k-medoids</td><td><code>correlate_kmedoids.py</code></td><td>Cluster tightness &mdash; picks one real representative per group</td><td>Depends on the starting medoids; result is a local optimum</td></tr>
+</tbody>
+</table>
+</div>
+
+<h3><code>select_by_greedy()</code> &mdash; furthest-first traversal</h3>
+
+<pre>min_dist_masked = min_dist.copy()
+min_dist_masked[selected_idx] = -np.inf
+best_val = min_dist_masked.max()
+...
+selected_idx.append(next_idx)
+<span class="c"># For each remaining candidate c, min_dist[c] may decrease now that</span>
+<span class="c">#   new_min_dist[c] = min(min_dist[c], D[c, next_idx])</span>
+min_dist = np.minimum(min_dist, D[:, next_idx])</pre>
+
+<div class="box def"><span class="k">The formula</span>
+<p>$$\text{next}=\arg\max_{c\notin S}\ \min_{s\in S} D(c,s)$$</p>
+<p class="fnote">$S$ is the set already selected, $c$ runs over the candidates not yet chosen, and
+$D$ is the signed distance matrix. In words: for every candidate work out how close it is to its
+nearest current holding, then take the candidate whose nearest holding is furthest away.</p></div>
+
+<div class="box why"><span class="k">Why the running <code>min_dist</code> vector matters</span>
+<p>Recomputing $\min_{s\in S} D(c,s)$ from scratch each step would cost
+$O(n \cdot |S|)$ every step. Because adding one name can only ever <em>reduce</em> a candidate's
+nearest-holding distance, one elementwise minimum against the new column is enough. Each step
+becomes $O(n)$. This is the standard furthest-first update, and the source comment calls it
+"the key efficiency trick".</p></div>
+
+<div class="box data"><span class="k">Sample data</span>
+<div class="io stack">
+<div><span class="lab">out &mdash; console, greedy maximin on the 233-name universe</span>
+<pre>Greedy Maximin: fixed anchors = VOO, VEA
+  Step  3: added TBF       (marginal min-dist = 0.6752)
+  Step  4: added HYMB      (marginal min-dist = 0.6681)
+  Step  5: added GLD       (marginal min-dist = 0.6383)
+  Step  6: added DBA       (marginal min-dist = 0.6304)
+  Step  7: added BNO       (marginal min-dist = 0.6243)
+  ...
+  Step 30: added EWT       (marginal min-dist = 0.4447)   &lt;- curve has flattened</pre></div>
+</div>
+<p>The 30 names: VOO, VEA, TBF, HYMB, GLD, DBA, BNO, ELV, XLU, KSA, VRP, AMLP, VWOB, EWZ, PFFD,
+TAN, URA, INDA, BIZD, LIT, SCHH, XBI, XLP, EWW, FPE, ANGL, KRE, ITB, XME, EWT. The marginal
+distance falls from 0.6752 at step 3 to 0.4447 at step 30 &mdash; that decline is exactly what
+<code>greedy_marginal_diversity.png</code> plots, and where it flattens is the practical answer to
+"how many do I actually need?".</p></div>
+
+<div class="box warn"><span class="k">Trap</span>
+<p>Ties are broken by combined volume, not by <code>argmax</code>. The code finds every index
+within $10^{-12}$ of the best score and picks the most liquid among them. Plain
+<code>np.argmax</code> would silently prefer whichever ticker happened to sort first
+alphabetically, which is not a decision anyone would defend.</p></div>
+
+<h3><code>select_by_maxdiv()</code> &mdash; greedy on a portfolio-level objective</h3>
+
+<div class="box def"><span class="k">The formula</span>
+<p>$$DR(w)=\frac{w^{\top}\sigma}{\sqrt{w^{\top}\Sigma w}},\qquad
+DR_{\text{EW}}=\frac{\frac{1}{N}\sum_{i=1}^{N}\sigma_i}{\sqrt{\frac{1}{N^{2}}\mathbf{1}^{\top}\Sigma\mathbf{1}}}$$</p>
+<p class="fnote">$w$ is the weight vector, $\sigma$ the vector of individual volatilities with
+$\sigma_i=\sqrt{\Sigma_{ii}}$, and $\Sigma$ the covariance matrix of the daily log returns. $N$ is
+the number of holdings and $\mathbf{1}$ a vector of ones, so $w=\mathbf{1}/N$ is equal weighting.
+$DR=1$ means no diversification benefit at all; higher is better. The measure is from
+Choueifaty and Coignard (2008).</p></div>
+
+<div class="box gist"><span class="k">In plain words</span>
+<p>At each step it asks "if I added this fund to what I already hold, and split money evenly, how
+much would the portfolio's total risk fall below the average risk of its parts?" and takes the
+winner.</p></div>
+
+<div class="box data"><span class="k">Sample data</span>
+<div class="io stack">
+<div><span class="lab">out &mdash; diversification ratio as the basket grows</span>
+<pre>  Anchors seeded: VOO, VEA          DR = 1.0574   (two equity funds barely diversify each other)
+  Step   3: UGL     DR = 1.3565
+  Step   4: TBF     DR = 1.6151
+  Step   5: DBA     DR = 1.7062
+  Step  10: ELV     DR = 1.8764
+  Step  15: XLP     DR = 1.8899     &lt;- the peak
+  Step  20: PHYS    DR = 1.8791
+  Step  30: EWT     DR = 1.8574     &lt;- adding names now makes the ratio worse</pre></div>
+</div>
+<p>The ratio peaks at 15 holdings and then declines. The code still returns 30 because
+<code>N_SELECT</code> says so; the curve is telling you 30 is past the useful point on this
+objective.</p></div>
+
+<div class="box why"><span class="k">Why the covariance is not annualised here</span>
+<p>The diversification ratio is a ratio of two quantities that both scale with $\sqrt{k}$, so the
+annualisation factor cancels exactly. The source says so in a comment, and skipping the
+multiplication removes a place where a wrong factor could hide.</p></div>
+
+<h3><code>select_by_kmedoids()</code> &mdash; clustering with two seats reserved</h3>
+
+<div class="box def"><span class="k">The formula</span>
+<p>$$\text{medoid}(C)=\arg\min_{j\in C}\ \sum_{i\in C} D(i,j),\qquad
+\text{assign}(i)=\arg\min_{m\in M} D(i,m)$$</p>
+<p class="fnote">$C$ is one cluster, $M$ is the current set of medoids, and $D$ is the same
+signed distance matrix. A medoid is an actual observed ETF, not an average of several &mdash;
+which matters, because you can buy a medoid.</p></div>
+
+<div class="box def"><span class="k">What it does</span>
+<p><b>Input:</b> the distance matrix and the survivor metadata. <b>Output:</b> 30 tickers plus a
+diagnostics table with each medoid's cluster size and average distance to its members.
+<b>Role:</b> a representative-based alternative to the two greedy methods. VOO and VEA are locked
+as fixed medoids and never move during the update step.</p></div>
+
+<div class="box data"><span class="k">Sample data</span>
+<div class="io">
+<div><span class="lab">out &mdash; convergence</span>
+<pre>k-medoids iteration  1: updated medoids
+k-medoids iteration  2: updated medoids
+k-medoids iteration  3: converged</pre></div>
+<div><span class="lab">out &mdash; medoid_info, first rows</span>
+<pre>ticker  cluster_size  avg_cluster_distance
+   VOO            51                0.2500
+   VEA            38                0.3117
+   IWS            60                0.2694
+  XSOE            17                0.2517
+   UGL            14                0.2537</pre></div>
+</div>
+<p>Three passes to converge, cap 25. VOO alone represents 51 of the 233 survivors &mdash; a
+plain reading of how much of the ETF universe is really one bet on US large-cap equities.</p></div>
+
+<div class="box why"><span class="k">Why the non-anchor medoids are ranked by cluster size</span>
+<p>After convergence the non-anchor medoids are sorted by cluster size descending, then by average
+distance ascending. A medoid representing 60 funds stands for a larger slice of the investable
+universe than one representing 3, so it earns an earlier slot when the basket has to be
+truncated.</p></div>
+
+<h2 id="sec8"><span class="sec-no">08</span>Stage 6 &mdash; scoring the basket &mdash; <code>compute_stats</code></h2>
+
+<pre>ann_ret = r.mean() * annualization_periods
+ann_vol = r.std() * np.sqrt(annualization_periods)
+sharpe = (ann_ret - RISK_FREE) / ann_vol if ann_vol &gt; 0 else np.nan
+
+cum = r.cumsum()
+wealth = np.exp(cum)
+running_max = wealth.cummax()
+drawdown = 1.0 - (wealth / running_max)
+max_dd = drawdown.max()</pre>
+
+<div class="box def"><span class="k">The formula</span>
+<p>$$\mu_i^{\text{ann}}=k\,\overline{r_i},\qquad
+\sigma_i^{\text{ann}}=\sqrt{k}\;\mathrm{sd}(r_i),\qquad
+S_i=\frac{\mu_i^{\text{ann}}-R_f}{\sigma_i^{\text{ann}}},\qquad
+\text{MDD}_i=\max_{t}\left(1-\frac{W_{i,t}}{\max_{u\le t} W_{i,u}}\right)$$</p>
+<p class="fnote">$\overline{r_i}$ is the mean daily log return of ETF $i$; $k=252$ for a daily
+panel; $R_f=0.05$ is the annual risk-free rate; $W_{i,t}=\exp\!\left(\sum_{u\le t} r_{i,u}\right)$
+is the wealth path starting at 1; MDD is the maximum drawdown, the worst fractional fall from any
+earlier peak.</p></div>
+
+<div class="box def"><span class="k">What it does</span>
+<p><b>Input:</b> the selected tickers, the return panel and the candidate metadata.
+<b>Output:</b> one row per holding with annualised return, annualised volatility, Sharpe ratio,
+maximum drawdown, average absolute correlation with the rest of the basket, combined volume, start
+date and an anchor flag, sorted by Sharpe descending. <b>Role:</b> the human-readable report card
+written to <code>selected_*.csv</code>.</p></div>
+
+<div class="box data"><span class="k">Sample data</span>
+<div class="io stack">
+<div><span class="lab">out &mdash; compute_stats on the greedy basket, top six rows</span>
+<pre>ticker  ann_return  ann_vol  sharpe  max_drawdown  avg_abs_corr  is_anchor  vol_combined  start_date
+   GLD      0.1447   0.1525  0.6214        0.2180        0.1252          0  1.118444e+10  2004-11-18
+   VOO      0.1292   0.1971  0.4019        0.3399        0.4417          1  6.146809e+09  2010-09-09
+   EWT      0.1490   0.2559  0.3868        0.3930        0.3442          0  7.589805e+09  2004-01-02
+   URA      0.1518   0.3926  0.2594        0.5429        0.3110          0  3.138699e+09  2010-11-05
+   XME      0.1330   0.3475  0.2390        0.6172        0.3722          0  4.534488e+09  2006-06-22
+   XLU      0.0889   0.2036  0.1912        0.3477        0.2445          0  4.229341e+10  2000-01-03</pre></div>
+</div>
+<p>Check the VOO Sharpe by hand: $(0.1292-0.05)/0.1971=0.4019$. The
+<code>avg_abs_corr</code> column is the point of the whole exercise &mdash; GLD sits at 0.1252,
+meaning gold moves almost independently of the other 29 holdings, while VOO at 0.4417 is the most
+entangled name in the basket.</p></div>
+
+<div class="box warn"><span class="k">Trap</span>
+<p><code>avg_abs_corr</code> divides by <code>len(selected) - 1</code> after zeroing the
+self-correlation. A one-name basket would divide by zero. Nothing in the repository calls it that
+way, but the guard is missing.</p></div>
+
+<h2 id="sec9"><span class="sec-no">09</span>Stage 7 &mdash; turning a basket into weights</h2>
+
+<p>Seven rules live in <code>src/portfolio_allocation/</code>, one file each, all registered in
+<code>STRATEGY_FUNCTIONS</code>. Six of them are the same optimisation with a different objective
+function; only HRP is structurally different.</p>
+
+<div class="scroll">
+<table>
+<thead><tr><th>Rule</th><th>Needs</th><th>Objective (annualised where relevant)</th><th>Character</th></tr></thead>
+<tbody>
+<tr><td><code>min_variance</code></td><td>$\Sigma$</td><td>$\min\ w^{\top}\Sigma w$</td><td>Ignores returns entirely; piles into the calmest holdings</td></tr>
+<tr><td><code>mean_variance</code></td><td>$\mu,\Sigma$</td><td>$\max\ w^{\top}\mu_{\text{ann}}-\tfrac{\lambda}{2}w^{\top}\Sigma_{\text{ann}}w$</td><td>Classic Markowitz; $\lambda$ defaults to 3.0</td></tr>
+<tr><td><code>max_sharpe</code></td><td>$\mu,\Sigma$</td><td>$\max\ \dfrac{w^{\top}\mu_{\text{ann}}-R_f}{\sqrt{w^{\top}\Sigma_{\text{ann}}w}}$</td><td>Most sensitive to estimation error in $\mu$</td></tr>
+<tr><td><code>risk_parity</code></td><td>$\Sigma$</td><td>$\min\ \sum_i\left(RC_i-\tfrac{\sigma_p}{N}\right)^{2}$</td><td>Equal risk share per holding, not equal money</td></tr>
+<tr><td><code>max_diversification</code></td><td>$\Sigma$</td><td>$\max\ \dfrac{w^{\top}\sigma}{\sqrt{w^{\top}\Sigma w}}$</td><td>Same ratio as the max-DR selector, now over weights</td></tr>
+<tr><td><code>hrp</code></td><td>Return panel</td><td>Recursive inverse-variance bisection down a dendrogram</td><td>Never inverts a covariance matrix, so it is stable on large baskets</td></tr>
+<tr><td><code>min_cvar</code></td><td>Return panel</td><td>$\min\ \zeta+\dfrac{1}{T(1-\alpha)}\sum_t\max(-r_t^{\top}w-\zeta,0)$</td><td>Targets the worst 5&nbsp;% of days rather than average wobble</td></tr>
+</tbody>
+</table>
+</div>
+
+<p class="fnote">Symbols: $w$ is the weight vector; $\Sigma$ the covariance matrix of daily log
+returns and $\Sigma_{\text{ann}}=252\,\Sigma$; $\mu$ the vector of mean daily log returns and
+$\mu_{\text{ann}}=252\,\mu$; $\lambda$ the risk-aversion coefficient; $R_f=0.05$; $\sigma_i$ the
+standalone volatility of holding $i$; $\sigma_p=\sqrt{w^{\top}\Sigma w}$ the portfolio volatility;
+$RC_i=w_i(\Sigma w)_i/\sigma_p$ the risk contribution of holding $i$, which sums to $\sigma_p$;
+$T$ the number of observation days; $\alpha=0.95$ the confidence level; $\zeta$ an auxiliary
+variable that settles at the value-at-risk threshold.</p>
+
+<h3><code>run_slsqp_portfolio()</code> &mdash; the shared solver shell</h3>
+
+<pre>initial = np.ones(n_assets) / n_assets
+constraints = [{"type": "eq", "fun": lambda weights: weights.sum() - 1.0}]
+bounds = [(min_weight, max_weight)] * n_assets
+options = minimize_options or {"ftol": 1e-12, "maxiter": 1000}
+
+result = minimize(objective, initial, method="SLSQP",
+                  bounds=bounds, constraints=constraints, options=options)
+
+warn_if_not_converged(result, method_name)
+return clip_and_renormalize(result.x)</pre>
+
+<div class="box why"><span class="k">Why one shell and seven objectives</span>
+<p>Five of the seven rules are the same problem &mdash; long-only, fully invested, capped per
+holding &mdash; with a different scalar to minimise. Putting the bounds, the sum-to-one
+constraint, the starting point and the convergence warning in one place means a change to the
+constraint set cannot apply to some rules and not others. Only <code>min_cvar</code> opts out,
+because it optimises over an extra variable, and only <code>hrp</code> does not optimise at
+all.</p></div>
+
+<div class="box warn"><span class="k">Trap</span>
+<p><code>warn_if_not_converged</code> only prints. A failed optimisation still returns
+<code>result.x</code>, which is whatever the solver reached when it gave up, and the caller has
+no way to tell without reading the console. In a notebook, that warning scrolls past.</p></div>
+
+<h3><code>min_cvar()</code> &mdash; the one with an extra variable</h3>
+
+<div class="box def"><span class="k">The formula</span>
+<p>$$\min_{w,\zeta}\ \ \zeta+\frac{1}{T(1-\alpha)}\sum_{t=1}^{T}\max\!\left(-r_t^{\top}w-\zeta,\ 0\right)$$</p>
+<p class="fnote">$r_t$ is the vector of asset log returns on day $t$, so $-r_t^{\top}w$ is the
+portfolio loss that day. $T$ is the number of days, $\alpha=0.95$, and $\zeta$ is a free variable.
+Rockafellar and Uryasev (2000) showed that minimising this expression over both $w$ and $\zeta$
+gives the minimum conditional value-at-risk, and that at the optimum $\zeta$ equals the
+value-at-risk. Only days worse than $\zeta$ contribute, which is why the analytic gradient
+uses the indicator mask <code>losses &gt; zeta</code>.</p></div>
+
+<h3><code>apply_weight_bounds()</code> &mdash; the floor and cap projection</h3>
+
+<pre>bounded = np.full(n_assets, min_weight, dtype=float)
+remaining = 1.0 - n_assets * min_weight
+...
+tentative = remaining * active_pref / denom
+overflow = tentative - capacity[active_arr]
+hit_mask = overflow &gt; 1e-12
+if hit_mask.any():
+    <span class="c"># Lock capped assets in place, then redistribute only across the</span>
+    <span class="c"># remaining names that still have spare capacity.</span>
+    ...</pre>
+
+<div class="box gist"><span class="k">In plain words</span>
+<p>Give every holding the minimum first, then hand out the rest in proportion to what the
+optimiser wanted, and every time something hits its cap, freeze it and share the leftovers among
+the rest.</p></div>
+
+<div class="box data"><span class="k">Sample data</span>
+<div class="io">
+<div><span class="lab">in &mdash; raw optimiser output, 6 assets</span>
+<pre>[0.60, 0.25, 0.10, 0.05, 0.00, 0.00]</pre></div>
+<div><span class="lab">out &mdash; apply_weight_bounds(raw, 0.05, 0.20)</span>
+<pre>[0.20, 0.20, 0.20, 0.20, 0.10, 0.10]
+ sum = 1.000000
+                      &lt;- the two zero-weight names still get 10 % each</pre></div>
+</div>
+<p>Four holdings hit the 20&nbsp;% cap in three rounds. When only zero-preference names remain,
+the remaining 0.20 has nothing to be proportional to, so the code splits it evenly &mdash; which
+is why assets the optimiser rejected outright still end up at 10&nbsp;%, well above the
+5&nbsp;% floor.</p></div>
+
+<div class="box flag"><span class="k">The weakness, stated honestly</span>
+<p>The floor is applied <em>after</em> the optimisation, not inside it. Every solver runs with a
+lower bound of zero and only <code>max_weight</code> as a cap; the notebooks then project the
+answer into the $[\,0.05,\,0.20\,]$ box. The result is not the constrained optimum of the stated
+objective &mdash; it is the unconstrained-below optimum, pushed into a feasible region. The
+distance between the two is not measured anywhere.</p></div>
+
+<div class="box data"><span class="k">Sample data</span>
+<div class="io stack">
+<div><span class="lab">out &mdash; all seven rules on the 30-name greedy basket, daily returns 2018-2025, cap 0.20</span>
+<pre>ticker  min_variance  mean_variance  max_sharpe  risk_parity  max_div     hrp  min_cvar
+   VOO        0.0000         0.2000      0.2000       0.0218   0.0000  0.0172    0.0000
+   VEA        0.0000         0.0000      0.0000       0.0226   0.0000  0.0165    0.0000
+   TBF        0.2000         0.0000      0.0438       0.1136   0.2000  0.1079    0.2000
+  HYMB        0.1142         0.0000      0.0000       0.0592   0.1325  0.0663    0.1924
+   GLD        0.1691         0.2000      0.2000       0.0878   0.2000  0.1247    0.1592
+   DBA        0.1211         0.1118      0.1536       0.0682   0.1300  0.0806    0.0708
+   BNO        0.0000         0.0000      0.0000       0.0222   0.0287  0.0123    0.0000
+   ELV        0.0000         0.0000      0.0000       0.0219   0.0211  0.0162    0.0000</pre></div>
+</div>
+<p>Every column sums to 1 within rounding. The spread across rules is the real lesson: the same
+30 names produce a portfolio with zero VOO under minimum variance and a 20&nbsp;% VOO position
+under mean variance. Choosing the weighting rule matters as much as choosing the basket.</p></div>
+
+<h2 id="sec10"><span class="sec-no">10</span>Stage 8 &mdash; the buy-and-hold check</h2>
+
+<h3><code>run_weighted_backtest()</code></h3>
+
+<pre>entry_prices = prices.iloc[0].to_numpy(dtype=float)
+initial_allocations = initial_capital * weights_arr
+share_counts = initial_allocations / entry_prices
+
+portfolio_values = prices.to_numpy(dtype=float) @ share_counts
+portfolio_log_returns = np.log(portfolio_value_series / portfolio_value_series.shift(1)).fillna(0.0)
+return_periods = portfolio_log_returns.iloc[1:]</pre>
+
+<div class="box def"><span class="k">The formula</span>
+<p>$$n_i=\frac{C_0 w_i}{P_{i,0}},\qquad V_t=\sum_i n_i P_{i,t},\qquad
+r^{p}_t=\ln\!\left(\frac{V_t}{V_{t-1}}\right),\qquad
+\text{Calmar}=\frac{\mu^{\text{ann}}_p}{\text{MDD}_p}$$</p>
+<p class="fnote">$C_0$ is the initial capital, $w_i$ the target weight of holding $i$, $P_{i,0}$
+its price on the aligned entry date, and $n_i$ the fixed number of shares bought. $V_t$ is the
+portfolio value on day $t$, $r^p_t$ its log return, $\mu^{\text{ann}}_p$ the annualised portfolio
+log return and $\text{MDD}_p$ the maximum drawdown of the value path. The Calmar ratio is return
+per unit of worst-case loss.</p></div>
+
+<div class="box why"><span class="k">Why fixed shares rather than fixed weights</span>
+<p>Buy-and-hold means you buy once and do nothing. Weighting the individual asset returns each day
+would silently rebalance the portfolio back to target every day &mdash; a completely different
+strategy, and one that usually looks better because it sells winners. Converting to share counts
+on day one and marking those shares to market is the honest version, and it lets the weights
+drift exactly as they would in a real account.</p></div>
+
+<div class="box data"><span class="k">Sample data</span>
+<div class="io">
+<div><span class="lab">in &mdash; greedy basket, HRP weights, \$30,000</span>
+<pre>2018-01-01 to 2025-12-31
+30 tickers, weights sum to 1</pre></div>
+<div><span class="lab">out &mdash; metrics</span>
+<pre>start_date       : 2018-01-02
+end_date         : 2025-12-31
+n_trading_days   : 2011
+final_value      : 52424.26
+total_log_return : 0.5582
+ann_return       : 0.0700
+ann_vol          : 0.0942
+sharpe           : 0.2120
+max_drawdown     : 0.2496
+calmar           : 0.2804</pre></div>
+</div>
+<p>Check the total log return: $\ln(52424.26/30000)=0.5582$, exactly the reported
+<code>total_log_return</code>. Sharpe: $(0.0700-0.05)/0.0942=0.212$. The equity frame's first row carries
+a log return of 0 by construction (there is no prior day), and that first row is excluded from the
+mean and standard deviation.</p></div>
+
+<div class="box warn"><span class="k">Trap</span>
+<p><code>load_price_matrix</code> aligns the start to the <em>latest</em> first-valid date across
+all requested tickers. One young fund in the list silently shortens the whole backtest, and the
+returned <code>metrics["start_date"]</code> is the only place that tells you. Always read it
+rather than assuming your requested start was honoured.</p></div>
+
+<div class="box warn"><span class="k">Trap</span>
+<p>Weights are accepted if they sum to 1 within $10^{-4}$, but $V_0$ is computed as
+$\sum_i C_0 w_i$. If the weights sum to 0.9999, the reported total log return is measured against
+a starting value that is not quite the stated initial capital. The error is tiny but it is real.</p></div>
+
+<h2 id="sec11"><span class="sec-no">11</span>Side branch &mdash; the drawdown and volatility screen</h2>
+
+<p>This branch shares only the parquet file with the selection chain. It answers a different
+question: which ETFs have never fallen far, have grown steadily, and wobble the least?</p>
+
+<pre>uv run python scripts/scan_etfs_return_vol.py \
+  --min-drawdown -0.15 \
+  --min-average-yearly-return 0.03 \
+  --min-trading-days-per-year 200 \
+  --min-years 5 \
+  --output-dir outputs/etf_return_vol_screen</pre>
+
+<div class="box def"><span class="k">The formula</span>
+<p>$$\text{yearly}_{i,y}=\frac{P_{i,\text{last}(y)}}{P_{i,\text{first}(y)}}-1,\qquad
+\text{DD}_{i,t}=\frac{Q_{i,t}}{\max_{u\le t}Q_{i,u}}-1,\qquad
+\sigma^{\text{wk}}_i=\mathrm{sd}\!\left(\ln\frac{Q_{i,t}}{Q_{i,t-1}}\right)\sqrt{52}$$</p>
+<p class="fnote">$P_{i,\text{first}(y)}$ and $P_{i,\text{last}(y)}$ are ETF $i$'s first and last
+observed daily closes inside calendar year $y$; $Q_{i,t}$ is its weekly close, taken as the last
+observed price in each Friday-ending week; $\text{DD}$ is the drawdown, a negative number here;
+$\sigma^{\text{wk}}_i$ is annualised weekly volatility, using 52 weeks per year.</p></div>
+
+<div class="box def"><span class="k">What it does</span>
+<p><b>Input:</b> the shared parquet. <b>Output:</b> two CSV files tagged
+<code>YYYY-MM-DD_NNN</code> &mdash; a ranked summary and the per-year detail behind it.
+<b>Role:</b> a standalone shortlist; it does not feed the selection chain.</p></div>
+
+<div class="box data"><span class="k">Sample data</span>
+<div class="io stack">
+<div><span class="lab">out &mdash; etf_return_vol_screen_2026-08-10_001.csv, first seven rows</span>
+<pre>rank,ticker,start_year,end_year,years_observed,min_yearly_return,average_yearly_return,max_drawdown,weekly_volatility,annualized_weekly_volatility,n_weekly_returns
+1,JPST,2018,2025,8,-0.001,0.031,-0.032,0.002,0.012,450
+2,JAAA,2021,2025,5,0.005,0.046,-0.025,0.002,0.015,271
+3,SGOV,2021,2025,5,0.000,0.032,-0.026,0.002,0.017,292
+4,PULS,2019,2025,7,0.001,0.035,-0.059,0.003,0.021,403
+5,STIP,2016,2025,10,-0.032,0.031,-0.055,0.004,0.027,521
+6,VNLA,2017,2025,9,-0.005,0.031,-0.066,0.004,0.028,476
+7,VTIP,2016,2025,10,-0.029,0.032,-0.053,0.004,0.029,521</pre></div>
+</div>
+<p>Only 12 of the 500 ETFs pass. Every one of them is a short-duration bond or cash-substitute
+fund, which is the honest answer to "never lose more than 15&nbsp;% and still make 3&nbsp;% a
+year" over a window containing 2022.</p></div>
+
+<div class="box warn"><span class="k">Trap</span>
+<p>The calendar-year return uses the first observed close <em>inside</em> the year, not the last
+close of the previous year. That means the first trading day's move of each year is not counted
+anywhere, and the yearly returns do not chain into the total return. It is a defensible
+convention for a screen, but do not multiply these numbers together.</p></div>
+
+<div class="box warn"><span class="k">Trap</span>
+<p><code>next_run_tag()</code> counts existing files matching today's date and adds one. Delete an
+old file and the next run will overwrite a name that is already taken. Log tags are derived from
+what is on disk, not from a counter.</p></div>
+
+<h2 id="sec12"><span class="sec-no">12</span>Separate track &mdash; <code>feature_engineering</code></h2>
+
+<p>This is the one part of the repository that is not connected to anything else. It reads
+minute bars from ClickHouse and builds a leakage-aware research dataset of intraday predictors
+and forward-looking labels. It has its own <code>config.toml</code> and its own command-line
+entry point, and nothing in the ETF selection chain imports it.</p>
+
+<pre>uv run python -m feature_engineering.cli --config src/feature_engineering/config.toml \
+  --run-name verify_2026_08_10       <span class="c"># optional output-folder name</span>
+  <span class="c"># --start-date / --end-date override the dates in the config file</span></pre>
+
+<div class="box def"><span class="k">What it does</span>
+<p><b>Input:</b> minute bars for a configured symbol list and date range. <b>Output:</b> a
+research table under <code>outputs/feature_engineering/&lt;run_name&gt;/</code>. <b>Role:</b>
+exploratory only; the README says explicitly that it "does not feed the current ETF selection
+pipeline".</p></div>
+
+<div class="box why"><span class="k">Why it is kept separate</span>
+<p>The ETF chain works on daily closes over eight years; this track works on minute bars over a
+short window and cares about exactly when each piece of information became knowable. Mixing the
+two would force the daily code to carry timestamp machinery it does not need. Keeping them apart
+is the right call, and the guides say so.</p></div>
+
+<h3>The shape of one run</h3>
+
+<div class="mermaid">
+flowchart LR
+  ch[("ClickHouse: minute bars")] --> norm["normalize_source_frames()"]
+  norm --> sess["build_session_primitives()"]
+  sess --> att["attach_session_primitives()"]
+  att --> ctx["apply_context_joins()"]
+  ctx --> feat["run_feature_registry()"]
+  feat --> xs["run_cross_sectional_features()"]
+  xs --> lab["run_label_registry()"]
+  sess -. "forward columns, labels only" .-> lab
+  lab --> out[("feature_matrix.parquet")]
+</div>
+<p class="fnote">Cylinders are stored data; boxes are functions. The dashed arrow is the only route
+by which a forward-looking column reaches the pipeline, and it ends at the label builder, never at
+the predictors. Everything runs from <code>feature_engineering/cli.py:main()</code>.</p>
+
+<div class="box def"><span class="k">What each stage produces</span>
+<p><b>1. Normalize</b> puts every source on one timezone and one dtype set.
+<b>2. Sessionize</b> collapses minute bars into one row per symbol per trading date, with
+premarket, regular and postmarket blocks side by side, then attaches the safe parts of that row
+back onto every bar. <b>3. Context joins</b> merge outside series such as VIX with an as-of merge
+that respects a declared lag and a maximum staleness. <b>4. Features</b> run a registry of
+per-symbol functions, then a cross-sectional pass that ranks symbols against each other within one
+timestamp. <b>5. Labels</b> attach the forward targets last, on their own, and drop their helper
+columns afterwards.</p></div>
+
+<h3>The settings that change the answer</h3>
+
+<p>All of them live in <code>src/feature_engineering/config.toml</code>. Nothing here is
+hard-coded in the modules.</p>
+
+<div class="scroll">
+<table>
+<thead><tr><th>Setting</th><th>Current value</th><th>What moving it does</th></tr></thead>
+<tbody>
+<tr><td><code>[run] start_date</code>, <code>end_date</code></td><td>2025-10-01 to 2025-10-10</td><td>Eight trading sessions. Widening it scales the row count roughly linearly: 390 regular minutes per symbol per session.</td></tr>
+<tr><td><code>[run] internal_timezone</code></td><td><code>America/New_York</code></td><td>Every session boundary in <code>sessionize.py</code> is minutes from midnight in this zone. Change it and 09:30 stops meaning the opening bell.</td></tr>
+<tr><td><code>[[primary_sources]] symbols</code></td><td>SPY, QQQ, IWM, TLT, XLE</td><td>The symbols that get rows. The cross-sectional features rank within this set, so adding a symbol changes every other symbol's rank.</td></tr>
+<tr><td><code>[[context_sources]] lag</code>, <code>max_staleness</code></td><td>e.g. <code>0min</code> / <code>1D</code></td><td><code>lag</code> pushes the context timestamp forward before the as-of merge, modelling publication delay. <code>max_staleness</code> blanks a context value that is older than the limit rather than carrying it forward forever.</td></tr>
+<tr><td><code>[[context_sources]] enabled</code></td><td><code>options_summary</code> is <code>false</code></td><td>The options block is off. Turning it on adds four implied-volatility and open-interest columns and requires the <code>firstrate.options</code> table.</td></tr>
+<tr><td><code>[[timeframes]]</code></td><td><code>5min</code>, <code>15min</code></td><td>Resampled bars used by the multi-timeframe features. Removing a timeframe makes any feature that names it fail loudly rather than silently.</td></tr>
+<tr><td><code>[[features]] window</code></td><td>30, 60, 14 &hellip;</td><td>Window length in bars, and also the burn-in: <code>min_periods</code> equals the window, so the first <em>window</em> bars of each symbol are blank by design.</td></tr>
+<tr><td><code>[[labels]] n_quantiles</code></td><td>5</td><td>How many buckets the return label is cut into, ranked inside each timestamp.</td></tr>
+</tbody>
+</table>
+</div>
+
+<h3>The point-in-time rule, and the maths behind it</h3>
+
+<div class="box why"><span class="k">Why a session column cannot simply be joined onto a bar</span>
+<p>A session row summarises a whole trading day: its close, its high, its total volume. Joined onto
+the 10:00 bar of that same day, those columns tell the 10:00 bar what the day is going to do. The
+join in <code>attach_session_primitives()</code> therefore withholds every column that is not
+knowable while the session is still running &mdash; the whole <code>regular_*</code> summary, the
+<code>postmarket_*</code> block, and the four <code>next_regular_*</code> columns &mdash; 21 columns
+in total. What survives is backward-looking context: <code>prior_regular_close</code>,
+<code>prior_regular_range</code>, <code>overnight_gap</code> and the session open.</p></div>
+
+<div class="box def"><span class="k">The formula</span>
+<p>Realized volatility of a session, used as the second label one session ahead:</p>
+<p>$$\sigma_d=\operatorname{sd}\left(\left\{\ln\frac{p_{i}}{p_{i-1}}\ :\ i\in d\right\}\right),
+\qquad y^{\text{vol}}_{t}=\sigma_{d(t)+1}$$</p>
+<p>The forward return label, attached to every bar of session $d$:</p>
+<p>$$y^{\text{ret}}_{t}=\frac{C_{d(t)+1}}{p_t}-1$$</p>
+<p class="fnote">$p_i$ is the close of minute bar $i$; $d$ is one regular session and $i\in d$ runs
+over its 390 minute bars; $\operatorname{sd}$ is the sample standard deviation;
+$\sigma_d$ is that session's realized volatility; $d(t)$ is the session containing bar $t$ and
+$d(t)+1$ is the <em>next session that actually has regular bars</em>, not merely the next row;
+$C_{d}$ is the regular close of session $d$; $p_t$ is the close of the bar being labelled.
+Both labels look strictly forward, which is what makes them labels.</p></div>
+
+<div class="box data"><span class="k">Sample data</span>
+<p class="fnote">From a real run on 2026-08-10:
+<code>uv run python -m feature_engineering.cli --config src/feature_engineering/config.toml
+--run-name verify_2026_08_10</code>. ClickHouse was reachable, so these are live minute bars, not
+a fixture.</p>
+<div class="io stack">
+<div><span class="lab">in &mdash; session_primitives.parquet, SPY</span>
+<pre>session_date  regular_bar_count  regular_open  regular_close  prior_regular_close  overnight_gap  next_regular_close
+  2025-10-01                390      661.2059       666.5401                  NaN            NaN            667.1981
+  2025-10-02                390      668.4943       667.1981             666.5401       0.002932            667.2081
+  2025-10-03                390      668.0157       667.2081             667.1981       0.001225            669.6110
+  2025-10-06                390      669.6509       669.6110             667.2081       0.003661            667.1583</pre></div>
+<div><span class="lab">out &mdash; feature_matrix.parquet, SPY at 2025-10-02 10:00</span>
+<pre>close                                    667.248
+regular_open                             668.4943
+prior_regular_close                      666.5401
+overnight_gap                            0.00293186
+session_move_from_open                  -0.00186434
+bar_log_return_1m                       -0.00029879
+realized_vol_30m                         0.00031310
+vix_level                               16.24
+target_next_regular_session_return      -0.00005980   &lt;- the label: tomorrow's close over this bar's close
+target_next_regular_session_volatility   0.00022602
+target_next_regular_return_quantile      4.0</pre>
+<p class="fnote">Checks by hand: $668.4943/666.5401-1=0.002932$ is the overnight gap;
+$667.248/668.4943-1=-0.001864$ is the move from the open; and
+$667.2081/667.248-1=-0.0000598$ is the label, using the <em>next</em> session's close over
+<em>this</em> bar's close.</p></div>
+</div>
+<p>Whole-run totals: 5 symbols &times; 8 sessions = <b>40 session rows</b> with 54 columns, and
+<b>15,600 feature-matrix rows</b> with 97 columns (5 &times; 8 &times; 390 regular minutes). All
+three labels have a null rate of exactly <b>0.125</b> &mdash; one session in eight, the last one,
+has no session after it.</p></div>
+
+<div class="box warn"><span class="k">Trap</span>
+<p>Before the fix in section 18, that same 10:00 row also carried
+<code>regular_close = 667.1981</code> and <code>next_regular_close = 667.2081</code>. The second of
+those is the numerator of the label sitting three columns to its right. Any model trained on that
+matrix would have scored almost perfectly and taught you nothing. The matrix had 118 columns; it
+now has 97.</p></div>
+
+<div class="box flag"><span class="k">Stated honestly: two edges are still soft</span>
+<p><code>regular_open</code> survives the join and two features use it
+(<code>session_move_from_open</code>, <code>overnight_gap</code>). On a bar before 09:30 the
+session open is not yet known. The pipeline sidesteps this in practice because
+<code>cli.py</code> keeps only <code>market_session == "regular"</code> bars before building
+features, so no premarket bar reaches them &mdash; but the guard is the row filter, not the column
+list, and moving that filter would reopen the hole. Separately, nothing here is backtested: the
+track produces a labelled matrix and stops. There is no model, no split, and no walk-forward.</p></div>
+
+<h2 id="sec13"><span class="sec-no">13</span>Notebooks, tests and how to run everything</h2>
+
+<h3>The five notebooks</h3>
+
+<div class="scroll">
+<table>
+<thead><tr><th>Notebook</th><th>What it does</th><th>Calls</th></tr></thead>
+<tbody>
+<tr><td><code>data_pipeline_test.ipynb</code></td><td>Four cells: plots VOO against SPY and their return correlation</td><td>Nothing from <code>src/</code>; reads the parquet by a hard-coded relative path</td></tr>
+<tr><td><code>etf_inception_analysis.ipynb</code></td><td>ETF launch years, cumulative universe size, and how many survive each possible start-date cutoff</td><td><code>data_pipeline.etf_inception_analysis</code></td></tr>
+<tr><td><code>explore_selection_methods.ipynb</code></td><td>The main walkthrough: builds the panel, audits each filter, runs all three selectors, then compares them with an overlap matrix and a consensus ranking</td><td><code>correlate_utils</code>, all three selectors, <code>notebook_support</code></td></tr>
+<tr><td><code>explore_allocation_methods.ipynb</code></td><td>Runs all seven weighting rules plus equal weight on a fixed six-ETF basket, one chart each, then a cross-rule heatmap</td><td><code>portfolio_allocation</code>, <code>allocation_utils</code></td></tr>
+<tr><td><code>explore_buy_and_hold.ipynb</code></td><td>You edit two lists, it runs the backtest and plots the equity curve and drawdown</td><td><code>backtesting.buy_and_hold</code></td></tr>
+</tbody>
+</table>
+</div>
+
+<h3>The tests</h3>
+
+<p>Five unit test files, 22 tests, all passing offline in about a second and a half. They cover: the
+buy-and-hold valuation on a two-asset toy parquet; that the total-return filter really is in log
+units and the yearly-return helper really averages calendar-year sums; the default screen
+constants and the weekly volatility and drawdown maths; the feature-engineering session logic,
+as-of joins and forward-looking labels; and mean-variance feasibility, monotonicity in risk
+aversion, and rejection of a non-positive risk-aversion coefficient. Two integration tests
+execute notebooks end to end.</p>
+
+<div class="box warn"><span class="k">Trap</span>
+<p><code>tests/integration/test_allocation_notebook.py</code> is not offline-safe. Its basket
+includes BCD, which is <em>not</em> in the shared parquet &mdash; I checked all six tickers, and
+the other five are present. Without a live database that notebook produces an all-missing column,
+the covariance matrix fills with missing values, and every optimiser downstream returns
+nonsense.</p></div>
+
+<h3>Running it</h3>
+
+<pre><span class="c"># environment</span>
+uv sync
+
+<span class="c"># stage 1 and 2, need ClickHouse</span>
+uv run python -m data_pipeline.screen
+uv run python -m data_pipeline.export_daily_data
+
+<span class="c"># the standalone screen, works offline</span>
+uv run python scripts/scan_etfs_return_vol.py
+
+<span class="c"># the walkthrough, from the repository root</span>
+uv run python -m nbconvert --to notebook --execute --inplace \
+  notebooks/01_project_walkthrough/explore_selection_methods.ipynb
+
+<span class="c"># tests</span>
+uv run pytest</pre>
+
+<h2 id="sec14"><span class="sec-no">14</span>Call graph</h2>
+
+<pre>data_pipeline.screen.main()
+├── clickhouse_client.build_client()
+├── fetch_volume_by_year()
+└── fetch_start_dates()
+        └── sql_helpers.build_symbols_in_list()
+                        -> data/raw/volume_screen.csv
+
+data_pipeline.export_daily_data.main()
+├── correlate_utils.load_screened_universe()
+├── _build_daily_query()
+│       ├── sql_helpers.build_symbols_in_list()
+│       └── sql_helpers.exclusive_end_date()
+├── clickhouse_client.build_client()
+└── _validate_parquet_magic()
+                        -> data/raw/daily_close_volume_screened_2016_2025.parquet
+
+selection chain (driven by explore_selection_methods.ipynb)
+├── correlate_utils.load_candidates()
+│       ├── load_screened_universe()
+│       └── apply_start_date_filter()
+├── correlate_utils.load_daily_closes()
+│       ├── fetch_daily_closes()                  (database path)
+│       └── load_daily_closes_from_parquet()      (offline path)
+├── correlate_utils.build_return_matrix()
+├── correlate_utils.apply_shared_selection_filters()
+│       ├── filter_blacklisted_tickers()
+│       ├── filter_min_total_return()
+│       │       └── _filter_by_metric_hurdle() -> _subset_selection_universe()
+│       │                                      -> ensure_anchor_tickers()
+│       ├── filter_min_average_yearly_return()
+│       └── compute_annualized_volatility()
+├── correlate_utils.compute_spearman_corr()  -> spearman_corr_numpy()
+├── correlate_utils.compute_distance_matrix() -> correlation_distance_numpy()
+├── correlate_greedy.select_by_greedy()       -> build_anchor_first_selection()
+├── correlate_kmedoids.select_by_kmedoids()
+│       ├── _initialize_medoids() -> correlate_utils.furthest_first_indices()
+│       ├── _assign_clusters()
+│       └── _best_cluster_medoid()
+├── correlate_maxdiv.select_by_maxdiv()       -> _equal_weight_dr()
+├── correlate_utils.compute_stats()
+└── correlate_utils.save_heatmap() / save_results()
+                        -> outputs/correlation_analysis/selected_*.csv, heatmap_*.png
+
+allocation (driven by explore_allocation_methods.ipynb)
+├── portfolio_allocation.min_variance()          ─┐
+├── portfolio_allocation.mean_variance()          │
+├── portfolio_allocation.max_sharpe()             ├─> allocation_utils.run_slsqp_portfolio()
+├── portfolio_allocation.risk_parity()            │       ├── scipy.optimize.minimize (SLSQP)
+├── portfolio_allocation.max_diversification()   ─┘       ├── warn_if_not_converged()
+│                                                         └── clip_and_renormalize()
+├── portfolio_allocation.hrp_weights()
+│       ├── correlate_utils.spearman_corr_numpy()
+│       ├── correlate_utils.correlation_distance_numpy()
+│       ├── scipy.cluster.hierarchy.linkage / leaves_list
+│       └── allocation_utils.apply_cap() -> apply_weight_bounds()
+└── portfolio_allocation.min_cvar()  (its own solver call, extra variable zeta)
+
+backtesting.buy_and_hold.run_weighted_backtest()
+└── load_price_matrix()
+                        -> outputs/backtesting/buy_and_hold_*
+
+etf_screening (driven by scripts/scan_etfs_return_vol.py)
+└── build_screen_outputs()
+    ├── load_price_frame()
+    ├── compute_yearly_returns()   -> prepare_price_frame()
+    └── screen_etfs_by_drawdown()
+        ├── compute_drawdown_metrics()
+        └── compute_weekly_volatility()
+                        -> outputs/etf_return_vol_screen/*.csv</pre>
+
+<h2 id="sec15"><span class="sec-no">15</span>Edge cases</h2>
+
+<div class="scroll">
+<table>
+<thead><tr><th>Situation</th><th>What would go wrong</th><th>What handles it</th></tr></thead>
+<tbody>
+<tr><td>No trade in the final minute of a session</td><td>A fixed-timestamp query returns no close for that day</td><td><code>argMax(close, ts)</code> takes the last bar that exists</td></tr>
+<tr><td>Inclusive end date against a timestamp column</td><td>The whole last trading day is silently dropped</td><td><code>exclusive_end_date()</code> adds one day and uses a strict <code>&lt;</code></td></tr>
+<tr><td>ETF launched after the window opens</td><td>Its return series would be shorter than everyone else's</td><td><code>apply_start_date_filter()</code> drops it; 105 of 500 in the current run</td></tr>
+<tr><td>Scattered missing prices</td><td>Missing returns propagate into the correlation matrix</td><td><code>MIN_COVERAGE = 0.80</code> drops the worst offenders; the rest are median-filled before ranking</td></tr>
+<tr><td>An anchor fails a filter</td><td>The basket would quietly lose its required core holding</td><td><code>ensure_anchor_tickers()</code> raises after every filter; anchors also bypass the volatility band</td></tr>
+<tr><td>Anchor on the blacklist</td><td>Two settings contradict each other</td><td><code>filter_blacklisted_tickers()</code> raises with both names in the message</td></tr>
+<tr><td>Two candidates tie on the greedy score</td><td>Alphabetical order would decide the portfolio</td><td>Ties within $10^{-12}$ are broken by combined volume</td></tr>
+<tr><td>Fewer survivors than <code>N_SELECT</code></td><td>The selectors would index past the end</td><td><code>n_select = min(n_select, n)</code>, plus a printed warning in <code>build_return_matrix</code></td></tr>
+<tr><td>Infeasible weight bounds, e.g. 30 holdings capped at 2&nbsp;%</td><td>The projection would loop forever or return weights that do not sum to 1</td><td><code>validate_weight_bounds()</code> checks $N w_{\min}\le 1$ and $N w_{\max}\ge 1$ up front</td></tr>
+<tr><td>Solver returns a tiny negative weight at a bound</td><td>A negative holding in a long-only portfolio</td><td><code>clip_and_renormalize()</code> floors at zero and rescales</td></tr>
+<tr><td>Zero portfolio volatility in an objective</td><td>Division by zero inside the optimiser</td><td>Each objective returns a neutral value below a $10^{-12}$ threshold; risk parity also uses a $10^{-6}$ weight floor</td></tr>
+<tr><td>Truncated Parquet download</td><td>A confusing pandas error three stages later</td><td><code>_validate_parquet_magic()</code> checks the leading and trailing <code>PAR1</code> markers</td></tr>
+<tr><td>Requested ticker absent from the parquet</td><td>An all-missing column poisons the covariance matrix</td><td><b>Not handled</b> in the selection path; <code>load_price_matrix</code> in the backtest does raise a clear error</td></tr>
+<tr><td>Database unreachable</td><td>The whole analysis aborts</td><td>Now falls back to the parquet &mdash; see section 18</td></tr>
+<tr><td>A trading date holds only late-evening bars</td><td>That empty row becomes its neighbours' previous or next session, blanking real values</td><td><code>shift_over_regular_sessions()</code> shifts across rows with regular bars only</td></tr>
+<tr><td>A session with no next session, at the end of the window</td><td>The forward label would be undefined</td><td>Left as missing on purpose; the manifest records the null rate, 0.125 on the current eight-session run</td></tr>
+<tr><td>A context series older than its <code>max_staleness</code></td><td>A stale value is carried forward as if it were current</td><td>The as-of join blanks it and the audit table records the stale rate</td></tr>
+</tbody>
+</table>
+</div>
+
+<h2 id="sec16"><span class="sec-no">16</span>Gotchas and traps</h2>
+
+<div class="scroll">
+<table>
+<thead><tr><th>Idiom or setting</th><th>What it does</th><th>The trap</th></tr></thead>
+<tbody>
+<tr><td><code>except A, B:</code> without brackets</td><td>Catches several exception types</td><td>Only valid from Python 3.14 (PEP 758), and <b>only when there is no <code>as</code> clause</b>. Adding <code>as err</code> to an unbracketed list is a syntax error. The project requires <code>&gt;=3.14</code>, so this reads as a bug on older interpreters.</td></tr>
+<tr><td><code>log_ret.fillna(log_ret.median())</code></td><td>Fills missing returns with each ETF's own median before ranking</td><td>Imputed values have no variance and no covariance with anything, so this biases the covariance matrix downwards, inflates diversification ratios and understates portfolio volatility. Used in three places.</td></tr>
+<tr><td><code>TRADING_DAYS_PER_YEAR = 252</code></td><td>Annualises daily moments in the allocation and backtest code</td><td>Not linked to <code>DEFAULT_RETURN_FREQUENCY</code>. A weekly panel would be annualised as if it were daily.</td></tr>
+<tr><td><code>RISK_FREE = 0.05</code></td><td>Constant risk-free rate in every Sharpe ratio</td><td>Real short rates over 2018-2025 ranged from near zero to about 5&nbsp;%. A single number flatters the high-rate years and penalises the zero-rate ones.</td></tr>
+<tr><td><code>apply_weight_bounds</code> equal-split fallback</td><td>Shares out the remainder when no active holding has any preference left</td><td>Holdings the optimiser set to exactly zero can still finish well above the floor &mdash; 10&nbsp;% each in the worked example.</td></tr>
+<tr><td>Notebook project-root search</td><td>Finds the repository root so imports work</td><td>Three notebooks do this three different ways. <code>etf_inception_analysis.ipynb</code> assumes the current folder is already the root, and <code>explore_selection_methods.ipynb</code> looks up only one level &mdash; both fail when opened from the notebook's own folder, which is what Jupyter does by default. Only <code>notebook_support.bootstrap_notebook()</code> searches all parents, and that notebook imports it too late to help.</td></tr>
+<tr><td><code>RISK_AVERSION</code> in the allocation notebook</td><td>Meant to be the tunable coefficient $\lambda$</td><td>Set to 3.0 in the setup cell, then reassigned to 2.0 in the mean-variance cell immediately before use. Editing the documented knob at the top has no effect.</td></tr>
+<tr><td>Joining a session-level table onto bars</td><td>Gives every bar its day's context</td><td>A session row summarises the whole day, so most of its columns are unknowable at 10:00. The exclusion list in <code>FORWARD_LOOKING_SESSION_COLUMNS</code> is now the only thing standing between the feature matrix and its own labels. Add a session-level column and you must decide which side of that set it belongs on.</td></tr>
+<tr><td><code>np.select</code> inside a function that returns a Series</td><td>Vectorised if-else over conditions</td><td>It returns a bare array. Wrapping it with <code>pd.Series(...)</code> and no <code>index=</code> gives it a fresh <code>0..n-1</code> index, and the caller's assignment then aligns on the index and yields all-missing. It fails quietly, not loudly.</td></tr>
+<tr><td><code>warn_if_not_converged</code></td><td>Prints when the optimiser fails</td><td>It only prints. The failed weights are returned and used as if nothing happened.</td></tr>
+<tr><td>Checked-in outputs</td><td><code>outputs/</code> holds results from several past runs</td><td>They came from different windows and settings than the module defaults. Do not compare a file dated 2026-07-02 against a fresh run and conclude something changed.</td></tr>
+<tr><td>Stale references in <code>docs/reference/methods_math_quick_guide.md</code></td><td>Documents the maths behind each method</td><td>It cites seven module files that do not exist, including <code>correlate_ward.py</code>, <code>black_litterman.py</code> and <code>kelly_criterion.py</code>. The same stale names appear in two GUIDE files.</td></tr>
+</tbody>
+</table>
+</div>
+
+<h2 id="sec17"><span class="sec-no">17</span>Honest limitations</h2>
+
+<div class="box flag"><span class="k">The selection is in-sample</span>
+<p>ETFs are kept because their cumulative return over 2018-2025 cleared a hurdle, and then scored
+and backtested over that same 2018-2025 window. Every number in section 10 is therefore a fitted
+value, not a forecast. Nothing in the repository does a walk-forward test, and nothing splits the
+sample.</p></div>
+
+<div class="box flag"><span class="k">Survivorship bias in the universe</span>
+<p>The candidate list is built from symbols that traded during 2020-2025 and existed by 2018. ETFs
+that closed during the window never enter the file at all, so the universe is "funds that made it",
+not "funds you could have chosen in 2018".</p></div>
+
+<div class="box flag"><span class="k">No costs, no taxes, no execution</span>
+<p>There are no commissions, no bid-ask spreads, no expense ratios and no tracking error anywhere
+in the code. For a thirty-holding basket that includes thin funds such as KSA and BIZD, spreads and
+fund fees are a real drag that the reported Sharpe ratios do not carry.</p></div>
+
+<div class="box flag"><span class="k">One covariance estimate, no shrinkage</span>
+<p>Every allocation rule uses the plain sample covariance matrix of 2,011 daily observations across
+30 assets. That is enough observations to be invertible, but sample covariance is noisy, and
+<code>max_sharpe</code> in particular is famously sensitive to errors in the mean vector. No
+shrinkage estimator, no factor model, no bootstrap of the weights.</p></div>
+
+<div class="box flag"><span class="k">A single fixed window</span>
+<p><code>HISTORY_START</code> and <code>HISTORY_END</code> are constants. There is no rolling
+re-selection, no rebalancing, and no sensitivity analysis over the window. The eight years chosen
+contain one pandemic crash and one bond bear market; a different eight years would produce a
+different basket, and the code offers no way to see how different.</p></div>
+
+<div class="box flag"><span class="k">No single command runs it</span>
+<p>The selection method modules have no <code>main()</code>. The only path through the full chain
+is the notebooks, which means the results depend on execution order and on cell-level constants
+that are not in any configuration file.</p></div>
+
+<h2 id="sec18"><span class="sec-no">18</span>Fixes applied</h2>
+
+<p>Six defects were fixed in this pass. Everything else found is described above and left alone.
+The first three are in the ETF selection chain and its documentation; the last three are in the
+<code>feature_engineering</code> track, and the first of those is the serious one.</p>
+
+<h3>1. The offline fallback never fired &mdash; <code>src/correlation_analysis/correlate_utils.py</code></h3>
+
+<p><code>load_daily_closes()</code> promises "ClickHouse when possible, else from local parquet",
+and the guides tell readers the notebooks work offline. It only caught <code>KeyError</code> and
+<code>FileNotFoundError</code>, which cover missing environment variables and a missing
+<code>.env</code> file. With a <code>.env</code> present but the server down,
+<code>build_client()</code> raises <code>OperationalError</code>, which escaped and aborted the
+run. The clause now also catches <code>ClickHouseError</code> and <code>OSError</code>, and prints
+the underlying reason so a genuine database problem is still visible rather than silently
+swallowed.</p>
+
+<pre><span class="c"># before</span>
+except KeyError, FileNotFoundError:
+
+<span class="c"># after</span>
+except (KeyError, FileNotFoundError, ClickHouseError, OSError) as connect_error:
+    print(f"ClickHouse unavailable ({type(connect_error).__name__}: {connect_error}).")</pre>
+
+<p class="fnote">Verified by pointing the client at a closed port: the run now prints
+<code>ClickHouse unavailable (OperationalError: ... Connection refused)</code>, falls back, and
+loads 6,033 rows from the parquet.</p>
+
+<h3>2. A stale hard-coded cutoff &mdash; <code>src/data_pipeline/etf_inception_analysis.py</code></h3>
+
+<p>The diagnostic printed how many ETFs survive a <code>2016-01-01</code> cutoff and labelled the
+result "survive cutoff". The selection stage has used <code>HISTORY_START</code>
+(<code>2018-01-01</code>) for some time, so the reported number was for a filter nobody runs. The
+cutoff is now derived from <code>HISTORY_START</code> and the printed label shows the date, so the
+diagnostic cannot drift again. The output changed from 500 split at 2016 to the correct
+<b>395 survive, 105 filtered out</b> at 2018-01-01 &mdash; which matches what
+<code>apply_start_date_filter()</code> actually reports. The module docstring's
+<code>Run:</code> line was also wrong (<code>data_pipeline/etf_inception_analysis.py</code>, a path
+that has not existed since the move to <code>src/</code>); it now reads
+<code>uv run python -m data_pipeline.etf_inception_analysis</code>.</p>
+
+<h3>3. Broken documentation links &mdash; <code>README.md</code>, <code>GUIDE_ROOT.md</code></h3>
+
+<p>Eleven links pointed at absolute paths under <code>/home/ai4000/projects/etf_selection/</code>,
+a directory that no longer exists; the repository now lives under
+<code>one-time-projects/</code>. They are now relative (<code>./GUIDE_ROOT.md</code>,
+<code>./src/data_pipeline</code>, and so on), so they work from any checkout and on GitHub.</p>
+
+<h3>4. The label was sitting in the predictor set &mdash; <code>src/feature_engineering/sessionize.py</code>, <code>labels.py</code></h3>
+
+<p>This is the one that would have wasted somebody's week. <code>attach_session_primitives()</code>
+joined the session-level table onto every minute bar of that session and excluded exactly one
+column, <code>asof_timestamp</code>. Everything else came along: the session's own close, high, low,
+volume and return; the whole postmarket block; and all four <code>next_regular_*</code> columns. So
+the 10:00 bar of a session knew that session's 16:00 close, and it also knew the <em>next</em>
+session's close &mdash; which is the numerator of
+<code>target_next_regular_session_return</code>.</p>
+
+<pre><span class="c"># before &mdash; one column excluded</span>
+if column not in {"asof_timestamp"}
+
+<span class="c"># after &mdash; a named set of everything not knowable mid-session</span>
+if column not in FORWARD_LOOKING_SESSION_COLUMNS</pre>
+
+<p><code>FORWARD_LOOKING_SESSION_COLUMNS</code> is a <code>frozenset</code> defined at the top of
+<code>sessionize.py</code> with a comment saying why each family is in it. The labels still need
+<code>next_regular_close</code>, so <code>run_label_registry()</code> now reads it from the
+session-level table, uses it, and drops it again before returning, which keeps every forward-looking
+value inside that one function.</p>
+
+<div class="box data"><span class="k">Sample data</span>
+<div class="io">
+<div><span class="lab">in &mdash; SPY bar, 2025-10-02 10:00</span>
+<pre>close                667.248
+<span class="c">before the fix, same row:</span>
+regular_close        667.1981
+next_regular_close   667.2081</pre></div>
+<div><span class="lab">out &mdash; the label on that row</span>
+<pre>target_next_regular_session_return
+  = 667.2081 / 667.248 - 1
+  = -0.0000598    &lt;- computable from a column that was in the features</pre></div>
+</div>
+<p>Columns removed from the feature matrix: <b>21</b>, taking it from 118 to 97. Verified on the
+live run described in section 12, plus a synthetic three-session fixture. A new unit test,
+<code>test_bar_level_join_withholds_forward_looking_session_columns</code>, pins the contract.</p></div>
+
+<h3>5. Session labels came back all blank on any non-default index &mdash; <code>sessionize.py</code></h3>
+
+<p><code>classify_market_session()</code> builds the session name with <code>np.select</code>, which
+returns a plain NumPy array with no index. The old code wrapped it as <code>pd.Series(...)</code>,
+so it received a fresh <code>0..n-1</code> index. The caller then assigns it to a column of a frame
+that may have any index at all, and pandas aligns on the index, producing missing values in every
+row. The two returned series are now built with the caller's index explicitly.</p>
+
+<div class="box data"><span class="k">Sample data</span>
+<p class="fnote">Ten minute bars in a frame indexed <code>100&hellip;109</code>, which is what any
+filtered or concatenated frame looks like:</p>
+<div class="io">
+<div><span class="lab">before</span>
+<pre>market_session: [nan, nan, nan, nan, nan,
+                 nan, nan, nan, nan, nan]
+null count: 10 of 10</pre></div>
+<div><span class="lab">after</span>
+<pre>market_session: ['regular', 'regular', 'regular',
+                 'regular', 'regular', 'regular',
+                 'overnight', 'regular', 'regular',
+                 'regular']
+null count: 0 of 10</pre></div>
+</div>
+<p>Stated plainly: in the current command-line path this was <b>dormant</b>, because
+<code>_build_primary_frame()</code> ends with <code>reset_index(drop=True)</code> and so hands over
+a plain <code>0..n-1</code> index. It is fixed because the function is public, is called directly by
+the tests, and would fail silently rather than loudly the first time anyone filtered a frame before
+passing it in.</p></div>
+
+<h3>6. A shift over the wrong rows &mdash; <code>sessionize.py</code>, <code>labels.py</code></h3>
+
+<p>The trading-date convention in this repository rolls a bar timestamped 20:00 or later onto the
+<em>next</em> day. A Friday 20:30 bar therefore creates a Saturday session row that holds nothing
+but overnight bars. The previous-session and next-session columns were built with a plain
+<code>groupby("symbol").shift(&plusmn;1)</code> over every row, so that empty Saturday row became
+Friday's "next session" and Monday's "previous session", and both real values were replaced by
+missing ones. One shared helper, <code>shift_over_regular_sessions()</code>, now shifts across the
+rows that have regular bars and reindexes the result back, and it is used by all three places that
+need it: the four <code>next_regular_*</code> columns, the six <code>prior_regular_*</code> columns,
+and the next-session realized-volatility label.</p>
+
+<div class="box data"><span class="k">Sample data</span>
+<p class="fnote">Synthetic fixture: SPY on Thursday, Friday and Monday, plus one Friday 20:30 bar
+that rolls onto Saturday.</p>
+<div class="io stack">
+<div><span class="lab">in &mdash; session rows built from those bars</span>
+<pre>session_date  regular_bar_count  regular_close  overnight_bar_count
+  2025-10-02                3.0          101.0                  NaN
+  2025-10-03                3.0          102.5                  NaN
+  2025-10-04                NaN            NaN                  1.0   &lt;- Saturday, postmarket bar only
+  2025-10-06                3.0          104.0                  NaN</pre></div>
+<div><span class="lab">out &mdash; before and after</span>
+<pre>                       before    after
+Monday prior_regular_close    NaN    102.5   (Friday's close)
+Friday next_regular_close     NaN    104.0   (Monday's close)
+Friday next_session_vol       NaN    0.002738</pre></div>
+</div>
+<p>On the live October 2025 run this fix changes nothing, because that window contains no
+postmarket-only session rows: all 40 rows have 390 regular bars. It matters as soon as the window
+includes evening bars, which the trading-date rule is written to expect.</p></div>
+
+<div class="box why"><span class="k">Found but deliberately not fixed</span>
+<p>Several other defects are real but sit in files that already carry uncommitted changes from
+another session, so touching them would sweep unrelated edits into this commit. They are: the
+<code>RISK_AVERSION = 2.0</code> override in <code>explore_allocation_methods.ipynb</code>; the
+missing <code>BCD</code> ticker that makes that same notebook unable to run offline; the shallow
+project-root search in two notebooks; and the stale module names in
+<code>docs/reference/methods_math_quick_guide.md</code>. Each is described in section 16.</p></div>
+
+<p class="foot">Every figure on this page came from running this repository's own code against
+<code>data/raw/daily_close_volume_screened_2016_2025.parquet</code> on 2026-08-10, using the module
+defaults (2018-01-01 to 2025-12-31, daily returns, 30 holdings, VOO and VEA anchored). The
+<code>feature_engineering</code> figures in sections 12 and 18 came from a live ClickHouse run over
+2025-10-01 to 2025-10-10 on the same day. The unit test suite passes 22 of 22 after the fixes
+above, one test more than before: the label test was rewritten to match the new contract and a
+regression test for the bar-level join was added.</p>
+
+</div>
+</body>
+</html>

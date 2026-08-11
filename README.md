@@ -140,9 +140,9 @@ uv run pytest
 
 ## Where To Start
 
-- Read [GUIDE_ROOT.md](/home/ai4000/projects/etf_selection/GUIDE_ROOT.md) for repository navigation.
-- Read [GUIDE_OVERVIEW.md](/home/ai4000/projects/etf_selection/GUIDE_OVERVIEW.md) for the end-to-end architecture.
-- Open the walkthrough notebooks under [notebooks/01_project_walkthrough](</home/ai4000/projects/etf_selection/notebooks/01_project_walkthrough>) for the offline analysis flow.
+- Read [GUIDE_ROOT.md](./GUIDE_ROOT.md) for repository navigation.
+- Read [GUIDE_OVERVIEW.md](./GUIDE_OVERVIEW.md) for the end-to-end architecture.
+- Open the walkthrough notebooks under [notebooks/01_project_walkthrough](./notebooks/01_project_walkthrough) for the offline analysis flow.
 
 ## Next Useful Improvements
 

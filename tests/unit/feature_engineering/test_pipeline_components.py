@@ -5,7 +5,6 @@ and forward-looking label construction on compact synthetic fixtures.
 """
 
 from __future__ import annotations
-# ruff: noqa: E402
 
 import math
 import pathlib
@@ -21,6 +20,7 @@ if str(SRC_ROOT) not in sys.path:
 from feature_engineering.enrich import apply_context_joins
 from feature_engineering.labels import run_label_registry
 from feature_engineering.sessionize import (
+    attach_session_primitives,
     build_session_primitives,
     classify_market_session,
 )
@@ -176,13 +176,16 @@ def test_labels_use_only_future_session_data() -> None:
                 ]
             ),
             "close": [100.0, 101.0, 110.0, 115.5, 121.0],
-            "next_regular_close": [121.0, 121.0, pd.NA, pd.NA, pd.NA],
         }
     )
+    # Forward-looking columns live only on the session-level table, exactly as
+    # `build_session_primitives` emits them. They must never reach the feature
+    # frame, so `run_label_registry` has to read them from here.
     session_primitives = pd.DataFrame(
         {
             "symbol": ["SPY", "SPY"],
             "session_date": pd.to_datetime(["2025-10-01", "2025-10-02"]),
+            "regular_bar_count": [2.0, 3.0],
             "regular_close": [101.0, 121.0],
             "regular_end_timestamp": _ny_timestamp(
                 [
@@ -190,6 +193,7 @@ def test_labels_use_only_future_session_data() -> None:
                     "2025-10-02 19:59:00+00:00",
                 ]
             ),
+            "next_regular_close": [121.0, pd.NA],
         }
     )
 
@@ -227,3 +231,47 @@ def test_labels_use_only_future_session_data() -> None:
         rel_tol=1e-9,
     )
     assert set(manifest["kind"]) == {"label"}
+    # The helper columns are borrowed for the label maths and dropped again, so
+    # no forward-looking column survives into the returned matrix.
+    assert "next_regular_close" not in labeled.columns
+    assert "next_session_realized_volatility" not in labeled.columns
+
+
+def test_bar_level_join_withholds_forward_looking_session_columns() -> None:
+    """A bar joined mid-session must not carry that session's own outcome."""
+    timestamps = _ny_timestamp(
+        [
+            "2025-10-01 13:30:00+00:00",  # 09:30 NY
+            "2025-10-01 19:59:00+00:00",  # 15:59 NY
+            "2025-10-02 13:30:00+00:00",  # 09:30 NY
+            "2025-10-02 19:59:00+00:00",  # 15:59 NY
+        ]
+    )
+    primary = pd.DataFrame(
+        {
+            "symbol": ["SPY"] * 4,
+            "timestamp": timestamps,
+            "open": [100.0, 101.0, 102.0, 103.0],
+            "high": [101.0, 102.0, 104.0, 105.0],
+            "low": [99.0, 100.0, 101.0, 102.0],
+            "close": [101.0, 101.5, 103.0, 104.0],
+            "volume": [10.0, 10.0, 10.0, 10.0],
+            "trades_count": [1.0, 1.0, 1.0, 1.0],
+        }
+    )
+
+    classified_bars, session_primitives = build_session_primitives(primary)
+    enriched = attach_session_primitives(classified_bars, session_primitives)
+
+    # The session close and the next session's close are the answers, not inputs.
+    for forward_column in (
+        "regular_close",
+        "regular_return",
+        "next_regular_close",
+        "postmarket_close",
+    ):
+        assert forward_column in session_primitives.columns
+        assert forward_column not in enriched.columns
+
+    # Backward-looking context is still joined on.
+    assert enriched["prior_regular_close"].iloc[-1] == 101.5

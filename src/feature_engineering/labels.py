@@ -10,6 +10,7 @@ from typing import Any
 
 import numpy as np
 import pandas as pd
+from feature_engineering.sessionize import shift_over_regular_sessions
 
 # Labels are computed after feature construction to keep forward targets isolated.
 
@@ -68,9 +69,14 @@ def _attach_next_session_realized_volatility(
     merged = session_primitives.merge(
         realized_vol, on=["symbol", "session_date"], how="left"
     )
-    merged["next_session_realized_volatility"] = merged.groupby("symbol")[
-        "session_realized_volatility"
-    ].shift(-1)
+    # Shift over regular sessions only. A `session_date` that holds nothing but
+    # late postmarket bars carries no realized volatility, so a plain shift(-1)
+    # would hand that empty row to the day before it and blank out a real label.
+    merged["next_session_realized_volatility"] = shift_over_regular_sessions(
+        merged,
+        "session_realized_volatility",
+        periods=-1,
+    )
     return merged
 
 
@@ -115,9 +121,17 @@ def run_label_registry(
         session_primitives=session_primitives,
         regular_bars=feature_frame,
     )
+    # Forward-looking session columns are deliberately withheld from the feature
+    # matrix, so pull them in here, use them, and drop them again below. That
+    # keeps every target column confined to this function.
     label_frame = feature_frame.merge(
         working_primitives[
-            ["symbol", "session_date", "next_session_realized_volatility"]
+            [
+                "symbol",
+                "session_date",
+                "next_regular_close",
+                "next_session_realized_volatility",
+            ]
         ],
         on=["symbol", "session_date"],
         how="left",
@@ -153,6 +167,11 @@ def run_label_registry(
             }
         )
 
-    if "next_session_realized_volatility" in label_frame.columns:
-        label_frame = label_frame.drop(columns=["next_session_realized_volatility"])
+    forward_helper_columns = [
+        column
+        for column in ("next_regular_close", "next_session_realized_volatility")
+        if column in label_frame.columns
+    ]
+    if forward_helper_columns:
+        label_frame = label_frame.drop(columns=forward_helper_columns)
     return label_frame, pd.DataFrame(manifest_rows)

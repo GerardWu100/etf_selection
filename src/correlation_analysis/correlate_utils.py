@@ -49,6 +49,7 @@ import matplotlib
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
+from clickhouse_connect.driver.exceptions import ClickHouseError
 from data_pipeline.clickhouse_client import build_client
 from data_pipeline.paths import CORRELATION_OUTPUT_DIR, PRICE_PARQUET, SCREEN_CSV
 from data_pipeline.sql_helpers import build_symbols_in_list, exclusive_end_date
@@ -779,10 +780,7 @@ def load_daily_closes_from_parquet(
 
     # The parquet fallback keeps notebook and validation workflows independent
     # of database access, but it still enforces the same date window.
-    print(
-        "ClickHouse credentials unavailable. "
-        f"Falling back to local parquet -> {PRICE_PARQUET}"
-    )
+    print(f"Falling back to local parquet -> {PRICE_PARQUET}")
     parquet_df = pd.read_parquet(
         PRICE_PARQUET,
         columns=["ticker", "date", "close_price"],
@@ -824,9 +822,16 @@ def load_daily_closes(
     """Load daily closes from ClickHouse when possible, else from local parquet."""
     try:
         client = build_client()
-    except KeyError, FileNotFoundError:
-        # Missing env vars are expected in offline mode, so fall back cleanly
-        # instead of treating that as a hard failure.
+    except (KeyError, FileNotFoundError, ClickHouseError, OSError) as connect_error:
+        # Offline mode covers three separate situations: the CLICKHOUSE_* variables
+        # are absent (KeyError), the .env file is missing (FileNotFoundError), or
+        # the server refuses/mishandles the connection (ClickHouseError, OSError).
+        # All three mean "the database is not usable right now", so fall back to
+        # the shared parquet instead of aborting the whole analysis.
+        print(
+            "ClickHouse unavailable "
+            f"({type(connect_error).__name__}: {connect_error})."
+        )
         return load_daily_closes_from_parquet(
             symbols,
             start_date=start_date,

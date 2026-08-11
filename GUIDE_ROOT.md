@@ -61,12 +61,12 @@ ClickHouse + .env
 - `src/`
   - Main implementation code.
   - Start with:
-    - [src/data_pipeline](/home/ai4000/projects/etf_selection/src/data_pipeline)
-    - [src/correlation_analysis](/home/ai4000/projects/etf_selection/src/correlation_analysis)
-    - [src/portfolio_allocation](/home/ai4000/projects/etf_selection/src/portfolio_allocation)
-    - [src/backtesting](/home/ai4000/projects/etf_selection/src/backtesting)
-    - [src/feature_engineering](/home/ai4000/projects/etf_selection/src/feature_engineering)
-    - [src/etf_screening](/home/ai4000/projects/etf_selection/src/etf_screening)
+    - [src/data_pipeline](./src/data_pipeline)
+    - [src/correlation_analysis](./src/correlation_analysis)
+    - [src/portfolio_allocation](./src/portfolio_allocation)
+    - [src/backtesting](./src/backtesting)
+    - [src/feature_engineering](./src/feature_engineering)
+    - [src/etf_screening](./src/etf_screening)
 
 - `data/`
   - Shared raw and staged data folders. The active shared pipeline inputs now
@@ -89,8 +89,8 @@ ClickHouse + .env
 
 Where to start:
 
-- Read [README.md](/home/ai4000/projects/etf_selection/README.md).
-- Then read [GUIDE_OVERVIEW.md](/home/ai4000/projects/etf_selection/GUIDE_OVERVIEW.md).
+- Read [README.md](./README.md).
+- Then read [GUIDE_OVERVIEW.md](./GUIDE_OVERVIEW.md).
 - Then open the relevant source folder under `src/`.
 
 ## Part 3: Short Journal
