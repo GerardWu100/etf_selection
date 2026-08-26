@@ -109,7 +109,3 @@ tests/                unit and integration tests
 Read [GUIDE_ROOT.md](./GUIDE_ROOT.md) and [GUIDE_OVERVIEW.md](./GUIDE_OVERVIEW.md)
 for the folder map and data flow. Method-level math is in
 [docs/reference/methods_math_quick_guide.md](./docs/reference/methods_math_quick_guide.md).
-
-## License
-
-All rights reserved. See [LICENSE](LICENSE).
