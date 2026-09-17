@@ -829,8 +829,7 @@ def load_daily_closes(
         # All three mean "the database is not usable right now", so fall back to
         # the shared parquet instead of aborting the whole analysis.
         print(
-            "ClickHouse unavailable "
-            f"({type(connect_error).__name__}: {connect_error})."
+            f"ClickHouse unavailable ({type(connect_error).__name__}: {connect_error})."
         )
         return load_daily_closes_from_parquet(
             symbols,
