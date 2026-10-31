@@ -14,7 +14,6 @@ wheels/
 
 # Feature-engineering run artifacts
 outputs/feature_engineering/*
-!outputs/feature_engineering/GUIDE_outputs.md
 
 # Local secrets, credentials, and machine-specific state.
 .env.*

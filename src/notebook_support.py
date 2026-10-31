@@ -33,7 +33,7 @@ def bootstrap_notebook(start: Path | None = None) -> Path:
     current = (start or Path.cwd()).resolve()
     search_roots = [current, *current.parents]
     for candidate in search_roots:
-        if (candidate / "GUIDE_ROOT.md").exists():
+        if (candidate / "pyproject.toml").exists():
             source_root = candidate / "src"
             for path_to_add in [source_root, candidate]:
                 if str(path_to_add) not in sys.path:
