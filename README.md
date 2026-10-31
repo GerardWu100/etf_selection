@@ -36,7 +36,9 @@ The selection and allocation workflow is notebook-first; see
 - A ClickHouse server reachable with the credentials in `.env` (template in
   `.env.example`): `CLICKHOUSE_HOST`, `CLICKHOUSE_PORT`, `CLICKHOUSE_USER`,
   `CLICKHOUSE_PASSWORD`, `CLICKHOUSE_SECURE`, `CLICKHOUSE_VERIFY`.
-- ClickHouse table `firstrate.etfs`. The feature-engineering track can also
+- ClickHouse table `firstrate.etfs` with minute bars: `symbol`, `ts`
+  (`DateTime64`, America/New_York), `open`, `high`, `low`, `close`, `volume`.
+  The feature-engineering track can also
   read `firstrate.stocks`, `firstrate.futures`, `firstrate.crypto`,
   `firstrate.indices`, `firstrate.options`, and `coinmetrics.perpetual`.
 - The correlation-analysis and backtesting stages fall back to the local
@@ -55,11 +57,6 @@ uv sync
 uv run python -m data_pipeline.screen
 uv run python -m data_pipeline.export_daily_data
 
-# Run one ETF selection method against the shared dataset
-uv run python -m correlation_analysis.correlate_greedy
-uv run python -m correlation_analysis.correlate_kmedoids
-uv run python -m correlation_analysis.correlate_maxdiv
-
 # Standalone yearly-return / weekly-volatility screen
 uv run python scripts/scan_etfs_return_vol.py
 
@@ -70,9 +67,10 @@ uv run python -m feature_engineering.cli --config src/feature_engineering/config
 uv run pytest
 ```
 
-Portfolio allocation and buy-and-hold backtesting have no standalone scripts;
-run them from `notebooks/01_project_walkthrough/explore_allocation_methods.ipynb`
-and `explore_buy_and_hold.ipynb`.
+ETF selection, portfolio allocation and buy-and-hold backtesting have no
+standalone scripts; run them from `notebooks/01_project_walkthrough/`
+(`explore_selection_methods.ipynb`, `explore_allocation_methods.ipynb`,
+`explore_buy_and_hold.ipynb`) with the repository root as the working folder.
 
 ## Configuration
 
@@ -89,7 +87,7 @@ scripts/              thin CLI wrappers (currently scan_etfs_return_vol.py)
 notebooks/            walkthrough notebooks; the main selection/allocation entrypoint
 data/raw/             shared screened universe and daily parquet
 outputs/              generated CSVs, PNGs, and run artifacts per stage
-docs/reference/       ClickHouse notes and a methods/math quick guide
+content/post/         published blog post about the method
 tests/                unit and integration tests
 ```
 
@@ -106,6 +104,7 @@ tests/                unit and integration tests
 
 ## Where to start
 
-Read [GUIDE_ROOT.md](./GUIDE_ROOT.md) and [GUIDE_OVERVIEW.md](./GUIDE_OVERVIEW.md)
-for the folder map and data flow. Method-level math is in
-[docs/reference/methods_math_quick_guide.md](./docs/reference/methods_math_quick_guide.md).
+Open `notebooks/01_project_walkthrough/explore_selection_methods.ipynb`; each
+method section explains the method before its code. The blog post in
+`content/post/etf-selection-walkthrough/` tells the same story in prose.
+`TRAIL_NOTES.md` records settled decisions and known traps.

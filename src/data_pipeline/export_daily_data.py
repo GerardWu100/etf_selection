@@ -18,7 +18,7 @@ This script is designed for the exact workflow used in this repository:
    bytes to a local `.parquet` file.
 
 Run:
-    UV_CACHE_DIR=/tmp/uv-cache uv run python -m data_pipeline.export_daily_data
+    uv run python -m data_pipeline.export_daily_data
 """
 
 from __future__ import annotations
