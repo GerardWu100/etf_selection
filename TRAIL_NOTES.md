@@ -19,7 +19,7 @@
 
 - 2026-10-31: Daily close is `argMax(close, ts)` (last minute bar of the day), because the minute table does not guarantee a bar at the session close.
 - 2026-10-31: Selection hurdles (total return, average yearly return) are in log-return units, even where old labels say percent.
-- 2026-08-10: In `explore_allocation_methods.ipynb` the mean-variance cell resets `RISK_AVERSION = 2.0`, so the setup-cell value has no effect. Not fixed yet.
+- 2026-11-01: The saved mean-variance output in `explore_allocation_methods.ipynb` still comes from a stray `RISK_AVERSION = 2.0` reset (removed; the setup cell's 3.0 now applies). Rerun with database access before quoting those weights; at 3.0 the bond fund USHY gets more weight and XHB less.
 - 2026-08-10: `fillna(median)` before covariance (max-div selection, `correlate_utils`, HRP) shrinks covariance, inflates diversification ratios and understates volatility.
 - 2026-08-10: Annualisation uses 252 days regardless of return frequency (a weekly panel is annualised as daily), and `RISK_FREE = 0.05` applies to every year.
 - 2026-08-10: Optimiser non-convergence only prints a warning; the failed weights are still used.
